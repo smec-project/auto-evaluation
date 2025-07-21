@@ -1,0 +1,7 @@
+repos:
+  # C/C++ formatter
+  # Python formatter
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black

@@ -1,0 +1,8 @@
+# pyproject.toml
+
+[tool.black]
+line-length = 80
+preview = true
+enable-unstable-feature = [
+    "string_processing"
+]
