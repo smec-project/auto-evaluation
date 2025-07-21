@@ -109,25 +109,31 @@ def start_experiment():
     time.sleep(10)
 
     # Step 2: Start PMEC controller system (edge1 + amari)
-    # logger.info("\n=== STEP 2: PMEC Controller System Setup ===")
-    # pmec_controller = PMECController()
+    logger.info("\n=== STEP 2: PMEC Controller System Setup ===")
+    pmec_controller = PMECController()
 
-    # logger.info("Starting PMEC controller system...")
-    # controller_results = pmec_controller.start_pmec_system()
+    logger.info("Starting PMEC controller system...")
+    controller_results = pmec_controller.start_pmec_system()
 
-    # if not controller_results.get('overall_success', False):
-    #     logger.error("PMEC controller system setup failed")
-    #     logger.error(f"PMEC server success: {controller_results.get('server', {}).get('success', False)}")
-    #     logger.error(f"PMEC client success: {controller_results.get('client', {}).get('success', False)}")
-    #     return False
+    if not controller_results.get("overall_success", False):
+        logger.error("PMEC controller system setup failed")
+        logger.error(
+            "PMEC server success:"
+            f" {controller_results.get('server', {}).get('success', False)}"
+        )
+        logger.error(
+            "PMEC client success:"
+            f" {controller_results.get('client', {}).get('success', False)}"
+        )
+        return False
 
-    # logger.info("✓ PMEC controller system started successfully")
-    # logger.info(f"  - PMEC server started on edge1")
-    # logger.info(f"  - PMEC client started on amari")
+    logger.info("✓ PMEC controller system started successfully")
+    logger.info(f"  - PMEC server started on edge1")
+    logger.info(f"  - PMEC client started on amari")
 
-    # # Wait 3 seconds before starting app servers
-    # logger.info("Waiting 3 seconds before starting application servers...")
-    # time.sleep(3)
+    # Wait 3 seconds before starting app servers
+    logger.info("Waiting 3 seconds before starting application servers...")
+    time.sleep(10)
 
     # Step 3: Start PMEC application servers on edge1
     logger.info("\n=== STEP 3: PMEC Application Servers Setup ===")
