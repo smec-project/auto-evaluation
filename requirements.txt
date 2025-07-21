@@ -1,0 +1,4 @@
+fabric>=2.7.0
+invoke>=1.7.0
+paramiko>=3.0.0
+PyYAML>=6.0 

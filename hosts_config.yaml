@@ -1,0 +1,48 @@
+# SSH Hosts Configuration
+# This file contains the configuration for different remote hosts
+# that can be used with the remote executor module
+
+hosts:
+  amari:
+    host: 192.168.0.15
+    user: root
+    port: 22
+    key_filename: ~/.ssh/id_rsa
+    proxy_command: ssh zx@dex.csres.utexas.edu -W 192.168.0.15:%p
+    forward_agent: true
+    timeout: 30
+    description: "Amari host via proxy"
+    
+  edge0:
+    host: edge0  # This will be resolved by the proxy
+    user: zx
+    port: 22
+    key_filename: ~/.ssh/id_rsa
+    proxy_command: ssh zx@dex.csres.utexas.edu -W %h:%p
+    forward_agent: false
+    timeout: 30
+    description: "Edge0 host via proxy"
+    
+  edge1:
+    host: edge1  # This will be resolved by the proxy
+    user: zx
+    port: 22
+    key_filename: ~/.ssh/id_rsa
+    proxy_command: ssh zx@dex.csres.utexas.edu -W %h:%p
+    forward_agent: false
+    timeout: 30
+    description: "Edge1 host via proxy"
+
+# Default settings that apply to all hosts
+defaults:
+  timeout: 30
+  port: 22
+  key_filename: ~/.ssh/id_rsa
+  forward_agent: false
+
+# Proxy configuration
+proxy:
+  host: dex.csres.utexas.edu
+  user: zx
+  port: 22
+  key_filename: ~/.ssh/id_rsa 
