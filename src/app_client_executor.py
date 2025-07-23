@@ -47,7 +47,7 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/file-transfer && "
-            "python3 run_amarisoft.py 5-8"
+            "python3 run_amarisoft.py 5,6,7,8"
         )
 
         try:
@@ -118,7 +118,7 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/file-transfer-pmec && "
-            "python3 run_amarisoft.py 5-8"
+            "python3 run_amarisoft.py 5,6,7,8"
         )
 
         try:
@@ -195,7 +195,7 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding && python3"
             " run_amarisoft.py"
-            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 2"
+            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 1,2"
         )
 
         try:
@@ -272,7 +272,7 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding-pmec &&"
             " python3 run_amarisoft.py"
-            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 2"
+            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 1,2"
         )
 
         try:

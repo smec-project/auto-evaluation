@@ -4,7 +4,7 @@ PMEC Controller
 
 This module manages PMEC (Proximity Multi-access Edge Computing) controller components:
 - PMEC Controller Server on edge1 (runs python run.py)
-- PMEC Controller Client on amari (runs python run_amarisoft.py 2)
+- PMEC Controller Client on amari (runs python run_amarisoft.py 1,2...)
 """
 
 import logging
@@ -113,7 +113,7 @@ class PMECController:
         """
         self.logger.info("Starting PMEC controller client on amari...")
 
-        command = "cd ~/edge-client-prober && python run_amarisoft.py 2"
+        command = "cd ~/edge-client-prober && python run_amarisoft.py 1,2"
 
         try:
             result = self.host_manager.execute_on_host(
