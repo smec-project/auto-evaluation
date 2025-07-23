@@ -17,6 +17,7 @@ import time
 from src.basic_env_setup import BasicEnvSetup
 from src.app_server_executor import AppServerExecutor
 from src.app_client_executor import AppClientExecutor
+from src.amari_ping_test import AmariPingTest
 
 
 def setup_logging():
@@ -97,6 +98,14 @@ def start_experiment():
     )
     logger.info("Waiting 10 seconds before starting next step...")
     time.sleep(10)
+
+    # Network connectivity check
+    logger.info("\n=== NETWORK CONNECTIVITY CHECK ===")
+    ping_test = AmariPingTest()
+    if not ping_test.quick_health_check():
+        logger.error("Network connectivity check failed, aborting experiment")
+        return False
+    logger.info("✓ Network connectivity verified")
 
     # Step 2: Start application servers on edge1
     logger.info("\n=== STEP 2: Application Servers Setup ===")

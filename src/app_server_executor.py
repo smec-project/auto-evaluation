@@ -194,7 +194,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding && "
-            "taskset -c 0-11 python3 run.py 2"
+            "taskset -c 0-11 python3 run.py 3"
         )
 
         try:
@@ -270,7 +270,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding-pmec && "
-            "python3 run.py 2"
+            "python3 run.py 3"
         )
 
         try:

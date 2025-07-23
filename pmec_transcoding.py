@@ -18,6 +18,7 @@ from src.pmec_env_setup import PMECEnvSetup
 from src.app_server_executor import AppServerExecutor
 from src.app_client_executor import AppClientExecutor
 from src.pmec_controller import PMECController
+from src.amari_ping_test import AmariPingTest
 
 
 def setup_logging():
@@ -107,6 +108,14 @@ def start_experiment():
     # Wait 10 seconds before starting next phase
     logger.info("Waiting 10 seconds before starting PMEC servers...")
     time.sleep(10)
+
+    # Network connectivity check
+    logger.info("\n=== NETWORK CONNECTIVITY CHECK ===")
+    ping_test = AmariPingTest()
+    if not ping_test.quick_health_check():
+        logger.error("Network connectivity check failed, aborting experiment")
+        return False
+    logger.info("✓ Network connectivity verified")
 
     # Step 2: Start PMEC controller system (edge1 + amari)
     logger.info("\n=== STEP 2: PMEC Controller System Setup ===")
