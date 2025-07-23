@@ -183,18 +183,26 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Video Transcoding Server Functions
-    def start_video_transcoding_server(self) -> Dict[str, Any]:
+    def start_video_transcoding_server(
+        self, instance_count: int = 2
+    ) -> Dict[str, Any]:
         """
         Start video transcoding server on edge1.
+
+        Args:
+            instance_count: Number of server instances to start
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting video transcoding server on edge1...")
+        self.logger.info(
+            "Starting video transcoding server on edge1 with"
+            f" {instance_count} instances..."
+        )
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding && "
-            "taskset -c 0-11 python3 run.py 2"
+            f"taskset -c 0-11 python3 run.py {instance_count}"
         )
 
         try:
@@ -259,18 +267,26 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Video Transcoding PMEC Server Functions
-    def start_video_transcoding_pmec_server(self) -> Dict[str, Any]:
+    def start_video_transcoding_pmec_server(
+        self, instance_count: int = 2
+    ) -> Dict[str, Any]:
         """
         Start video transcoding PMEC server on edge1.
+
+        Args:
+            instance_count: Number of server instances to start
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting video transcoding PMEC server on edge1...")
+        self.logger.info(
+            "Starting video transcoding PMEC server on edge1 with"
+            f" {instance_count} instances..."
+        )
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding-pmec && "
-            "python3 run.py 2"
+            f"python3 run.py {instance_count}"
         )
 
         try:
@@ -337,9 +353,14 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Batch Operations
-    def start_all_servers(self) -> Dict[str, Any]:
+    def start_all_servers(
+        self, video_transcoding_instance_count: int = 2
+    ) -> Dict[str, Any]:
         """
         Start all application servers.
+
+        Args:
+            video_transcoding_instance_count: Number of instances for video transcoding servers
 
         Returns:
             Dictionary containing results for all servers
@@ -349,8 +370,12 @@ class AppServerExecutor:
         results = {
             "file_server": self.start_file_transfer_server(),
             "file_server_pmec": self.start_file_transfer_pmec_server(),
-            "video_transcoding": self.start_video_transcoding_server(),
-            "video_transcoding_pmec": self.start_video_transcoding_pmec_server(),
+            "video_transcoding": self.start_video_transcoding_server(
+                video_transcoding_instance_count
+            ),
+            "video_transcoding_pmec": self.start_video_transcoding_pmec_server(
+                video_transcoding_instance_count
+            ),
         }
 
         # Check overall success

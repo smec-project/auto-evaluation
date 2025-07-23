@@ -18,6 +18,7 @@ from src.basic_env_setup import BasicEnvSetup
 from src.app_server_executor import AppServerExecutor
 from src.app_client_executor import AppClientExecutor
 from src.amari_ping_test import AmariPingTest
+from src.config_loader import load_experiment_config
 
 
 def setup_logging():
@@ -26,6 +27,20 @@ def setup_logging():
         level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
     )
     return logging.getLogger(__name__)
+
+
+def load_config():
+    """Load experiment configuration from JSON file."""
+    logger = logging.getLogger(__name__)
+    config_file = "config/baseline_trancoding.json"
+
+    try:
+        config = load_experiment_config(config_file)
+        config.print_config_summary()
+        return config
+    except Exception as e:
+        logger.error(f"Failed to load configuration: {e}")
+        sys.exit(1)
 
 
 def test_connections():
@@ -65,6 +80,14 @@ def start_experiment():
     logger.info("=" * 60)
     logger.info("STARTING BASELINE TRANSCODING EXPERIMENT")
     logger.info("=" * 60)
+
+    # Load configuration
+    config = load_config()
+
+    # Extract configuration parameters
+    transcoding_ue_indices = config.get_transcoding_ue_indices()
+    file_transfer_ue_indices = config.get_file_transfer_ue_indices()
+    transcoding_server_instances = config.get_transcoding_server_instances()
 
     # Test connections first
     if not test_connections():
@@ -122,8 +145,13 @@ def start_experiment():
     logger.info("Waiting 3 seconds before starting next server...")
     time.sleep(3)
 
-    logger.info("Starting video transcoding server...")
-    video_server_result = app_server.start_video_transcoding_server()
+    logger.info(
+        "Starting video transcoding server with"
+        f" {transcoding_server_instances} instances..."
+    )
+    video_server_result = app_server.start_video_transcoding_server(
+        transcoding_server_instances
+    )
     if not video_server_result["success"]:
         logger.error("Failed to start video transcoding server")
         return False
@@ -137,8 +165,13 @@ def start_experiment():
     logger.info("\n=== STEP 3: Application Clients Setup ===")
     app_client = AppClientExecutor()
 
-    logger.info("Starting video transcoding client...")
-    video_client_result = app_client.start_video_transcoding_client()
+    logger.info(
+        "Starting video transcoding client with UE indices:"
+        f" {transcoding_ue_indices}..."
+    )
+    video_client_result = app_client.start_video_transcoding_client(
+        transcoding_ue_indices
+    )
     if not video_client_result["success"]:
         logger.error("Failed to start video transcoding client")
         return False
@@ -148,8 +181,13 @@ def start_experiment():
     logger.info("Waiting 3 seconds before starting next client...")
     time.sleep(3)
 
-    logger.info("Starting file transfer client...")
-    file_client_result = app_client.start_file_transfer_client()
+    logger.info(
+        "Starting file transfer client with UE indices:"
+        f" {file_transfer_ue_indices}..."
+    )
+    file_client_result = app_client.start_file_transfer_client(
+        file_transfer_ue_indices
+    )
     if not file_client_result["success"]:
         logger.error("Failed to start file transfer client")
         return False
@@ -164,10 +202,19 @@ def start_experiment():
     logger.info("✓ Basic environment (LTE + 5G) is running")
     logger.info("✓ Application servers are running on edge1:")
     logger.info("  - File transfer server (tmux: file_server)")
-    logger.info("  - Video transcoding server (tmux: video_transcoding)")
+    logger.info(
+        "  - Video transcoding server (tmux: video_transcoding,"
+        f" {transcoding_server_instances} instances)"
+    )
     logger.info("✓ Application clients are running on amari:")
-    logger.info("  - File transfer client (tmux: file_transfer)")
-    logger.info("  - Video transcoding client (tmux: video_transcoding)")
+    logger.info(
+        "  - File transfer client (tmux: file_transfer, UE:"
+        f" {file_transfer_ue_indices})"
+    )
+    logger.info(
+        "  - Video transcoding client (tmux: video_transcoding, UE:"
+        f" {transcoding_ue_indices})"
+    )
 
     logger.info("\n" + "=" * 60)
     logger.info("BASELINE TRANSCODING EXPERIMENT STARTED SUCCESSFULLY")

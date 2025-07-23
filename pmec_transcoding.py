@@ -19,6 +19,7 @@ from src.app_server_executor import AppServerExecutor
 from src.app_client_executor import AppClientExecutor
 from src.pmec_controller import PMECController
 from src.amari_ping_test import AmariPingTest
+from src.config_loader import load_experiment_config
 
 
 def setup_logging():
@@ -27,6 +28,20 @@ def setup_logging():
         level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
     )
     return logging.getLogger(__name__)
+
+
+def load_config():
+    """Load experiment configuration from JSON file."""
+    logger = logging.getLogger(__name__)
+    config_file = "config/pmec_transcoding.json"
+
+    try:
+        config = load_experiment_config(config_file)
+        config.print_config_summary()
+        return config
+    except Exception as e:
+        logger.error(f"Failed to load configuration: {e}")
+        sys.exit(1)
 
 
 def test_connections():
@@ -66,6 +81,15 @@ def start_experiment():
     logger.info("=" * 60)
     logger.info("STARTING PMEC TRANSCODING EXPERIMENT")
     logger.info("=" * 60)
+
+    # Load configuration
+    config = load_config()
+
+    # Extract configuration parameters
+    transcoding_ue_indices = config.get_transcoding_ue_indices()
+    file_transfer_ue_indices = config.get_file_transfer_ue_indices()
+    pmec_ue_indices = config.get_pmec_ue_indices()
+    transcoding_server_instances = config.get_transcoding_server_instances()
 
     # Test connections first
     if not test_connections():
@@ -121,8 +145,10 @@ def start_experiment():
     logger.info("\n=== STEP 2: PMEC Controller System Setup ===")
     pmec_controller = PMECController()
 
-    logger.info("Starting PMEC controller system...")
-    controller_results = pmec_controller.start_pmec_system()
+    logger.info(
+        f"Starting PMEC controller system with UE indices: {pmec_ue_indices}..."
+    )
+    controller_results = pmec_controller.start_pmec_system(pmec_ue_indices)
 
     if not controller_results.get("overall_success", False):
         logger.error("PMEC controller system setup failed")
@@ -138,7 +164,7 @@ def start_experiment():
 
     logger.info("✓ PMEC controller system started successfully")
     logger.info(f"  - PMEC server started on edge1")
-    logger.info(f"  - PMEC client started on amari")
+    logger.info(f"  - PMEC client started on amari (UE: {pmec_ue_indices})")
 
     # Wait 3 seconds before starting app servers
     logger.info("Waiting 10 seconds before starting application servers...")
@@ -159,8 +185,13 @@ def start_experiment():
     logger.info("Waiting 3 seconds before starting next server...")
     time.sleep(3)
 
-    logger.info("Starting video transcoding PMEC server...")
-    video_server_result = app_server.start_video_transcoding_pmec_server()
+    logger.info(
+        "Starting video transcoding PMEC server with"
+        f" {transcoding_server_instances} instances..."
+    )
+    video_server_result = app_server.start_video_transcoding_pmec_server(
+        transcoding_server_instances
+    )
     if not video_server_result["success"]:
         logger.error("Failed to start video transcoding PMEC server")
         return False
@@ -174,8 +205,13 @@ def start_experiment():
     logger.info("\n=== STEP 4: PMEC Application Clients Setup ===")
     app_client = AppClientExecutor()
 
-    logger.info("Starting video transcoding PMEC client...")
-    video_client_result = app_client.start_video_transcoding_pmec_client()
+    logger.info(
+        "Starting video transcoding PMEC client with UE indices:"
+        f" {transcoding_ue_indices}..."
+    )
+    video_client_result = app_client.start_video_transcoding_pmec_client(
+        transcoding_ue_indices
+    )
     if not video_client_result["success"]:
         logger.error("Failed to start video transcoding PMEC client")
         return False
@@ -185,8 +221,13 @@ def start_experiment():
     logger.info("Waiting 3 seconds before starting next client...")
     time.sleep(2)
 
-    logger.info("Starting file transfer PMEC client...")
-    file_client_result = app_client.start_file_transfer_pmec_client()
+    logger.info(
+        "Starting file transfer PMEC client with UE indices:"
+        f" {file_transfer_ue_indices}..."
+    )
+    file_client_result = app_client.start_file_transfer_pmec_client(
+        file_transfer_ue_indices
+    )
     if not file_client_result["success"]:
         logger.error("Failed to start file transfer PMEC client")
         return False
@@ -201,16 +242,24 @@ def start_experiment():
     logger.info("✓ PMEC environment (LTE + 5G + PMEC Controller) is running")
     logger.info("✓ PMEC controller system is running:")
     logger.info("  - PMEC server on edge1 (tmux: pmec_controller)")
-    logger.info("  - PMEC client on amari (tmux: pmec_controller)")
+    logger.info(
+        "  - PMEC client on amari (tmux: pmec_controller, UE:"
+        f" {pmec_ue_indices})"
+    )
     logger.info("✓ PMEC application servers are running on edge1:")
     logger.info("  - File transfer PMEC server (tmux: file_server_pmec)")
     logger.info(
-        "  - Video transcoding PMEC server (tmux: video_transcoding_pmec)"
+        "  - Video transcoding PMEC server (tmux: video_transcoding_pmec,"
+        f" {transcoding_server_instances} instances)"
     )
     logger.info("✓ PMEC application clients are running on amari:")
-    logger.info("  - File transfer PMEC client (tmux: file_transfer_pmec)")
     logger.info(
-        "  - Video transcoding PMEC client (tmux: video_transcoding_pmec)"
+        "  - File transfer PMEC client (tmux: file_transfer_pmec, UE:"
+        f" {file_transfer_ue_indices})"
+    )
+    logger.info(
+        "  - Video transcoding PMEC client (tmux: video_transcoding_pmec, UE:"
+        f" {transcoding_ue_indices})"
     )
 
     logger.info("\n" + "=" * 60)

@@ -8,6 +8,7 @@ This module manages PMEC (Proximity Multi-access Edge Computing) controller comp
 """
 
 import logging
+import time
 from typing import Dict, Any
 from .host_manager import HostManager
 
@@ -104,16 +105,24 @@ class PMECController:
             return {"success": False, "error": str(e)}
 
     # PMEC Controller Client Functions (amari)
-    def start_pmec_client(self) -> Dict[str, Any]:
+    def start_pmec_client(self, ue_indices: str = "1,2") -> Dict[str, Any]:
         """
         Start PMEC controller client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting PMEC controller client on amari...")
+        self.logger.info(
+            "Starting PMEC controller client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
 
-        command = "cd ~/edge-client-prober && python run_amarisoft.py 1,2"
+        command = (
+            f"cd ~/edge-client-prober && python run_amarisoft.py {ue_indices}"
+        )
 
         try:
             result = self.host_manager.execute_on_host(
@@ -174,11 +183,14 @@ class PMECController:
             return {"success": False, "error": str(e)}
 
     # Batch Operations
-    def start_pmec_system(self) -> Dict[str, Any]:
+    def start_pmec_system(self, ue_indices: str = "1,2") -> Dict[str, Any]:
         """
         Start both PMEC controller server and client.
 
         Note: Server should typically be started before client for proper coordination.
+
+        Args:
+            ue_indices: Comma-separated UE indices for the client (e.g., "1,2,3,4")
 
         Returns:
             Dictionary containing results for both components
@@ -187,7 +199,8 @@ class PMECController:
 
         # Start server first, then client
         server_result = self.start_pmec_server()
-        client_result = self.start_pmec_client()
+        time.sleep(3)
+        client_result = self.start_pmec_client(ue_indices)
 
         results = {
             "server": server_result,
@@ -302,11 +315,14 @@ class PMECController:
                 "error": str(e),
             }
 
-    def restart_pmec_system(self) -> Dict[str, Any]:
+    def restart_pmec_system(self, ue_indices: str = "1,2") -> Dict[str, Any]:
         """
         Restart the entire PMEC controller system.
 
         This will stop both components and then start them again.
+
+        Args:
+            ue_indices: Comma-separated UE indices for the client (e.g., "1,2,3,4")
 
         Returns:
             Dictionary containing restart operation results
@@ -322,7 +338,7 @@ class PMECController:
         time.sleep(2)
 
         # Start the system again
-        start_results = self.start_pmec_system()
+        start_results = self.start_pmec_system(ue_indices)
 
         results = {
             "stop_results": stop_results,

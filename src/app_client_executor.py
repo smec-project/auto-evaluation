@@ -36,18 +36,26 @@ class AppClientExecutor:
         self.logger = logging.getLogger(__name__)
 
     # File Transfer Client Functions
-    def start_file_transfer_client(self) -> Dict[str, Any]:
+    def start_file_transfer_client(
+        self, ue_indices: str = "5,6,7,8"
+    ) -> Dict[str, Any]:
         """
         Start file transfer client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting file transfer client on amari...")
+        self.logger.info(
+            "Starting file transfer client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
 
         command = (
             "cd ~/edge-client-prober/edge-apps/file-transfer && "
-            "python3 run_amarisoft.py 5,6,7,8"
+            f"python3 run_amarisoft.py {ue_indices}"
         )
 
         try:
@@ -107,18 +115,26 @@ class AppClientExecutor:
             return {"success": False, "error": str(e)}
 
     # File Transfer PMEC Client Functions
-    def start_file_transfer_pmec_client(self) -> Dict[str, Any]:
+    def start_file_transfer_pmec_client(
+        self, ue_indices: str = "5,6,7,8"
+    ) -> Dict[str, Any]:
         """
         Start file transfer PMEC client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting file transfer PMEC client on amari...")
+        self.logger.info(
+            "Starting file transfer PMEC client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
 
         command = (
             "cd ~/edge-client-prober/edge-apps/file-transfer-pmec && "
-            "python3 run_amarisoft.py 5,6,7,8"
+            f"python3 run_amarisoft.py {ue_indices}"
         )
 
         try:
@@ -183,19 +199,27 @@ class AppClientExecutor:
             return {"success": False, "error": str(e)}
 
     # Video Transcoding Client Functions
-    def start_video_transcoding_client(self) -> Dict[str, Any]:
+    def start_video_transcoding_client(
+        self, ue_indices: str = "1,2"
+    ) -> Dict[str, Any]:
         """
         Start video transcoding client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting video transcoding client on amari...")
+        self.logger.info(
+            "Starting video transcoding client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
 
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding && python3"
             " run_amarisoft.py"
-            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 1,2"
+            f" ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 {ue_indices}"
         )
 
         try:
@@ -260,19 +284,27 @@ class AppClientExecutor:
             return {"success": False, "error": str(e)}
 
     # Video Transcoding PMEC Client Functions
-    def start_video_transcoding_pmec_client(self) -> Dict[str, Any]:
+    def start_video_transcoding_pmec_client(
+        self, ue_indices: str = "1,2"
+    ) -> Dict[str, Any]:
         """
         Start video transcoding PMEC client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting video transcoding PMEC client on amari...")
+        self.logger.info(
+            "Starting video transcoding PMEC client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
 
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding-pmec &&"
             " python3 run_amarisoft.py"
-            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 1,2"
+            f" ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 {ue_indices}"
         )
 
         try:
@@ -339,9 +371,17 @@ class AppClientExecutor:
             return {"success": False, "error": str(e)}
 
     # Batch Operations
-    def start_all_clients(self) -> Dict[str, Any]:
+    def start_all_clients(
+        self,
+        file_transfer_ue_indices: str = "5,6,7,8",
+        video_transcoding_ue_indices: str = "1,2",
+    ) -> Dict[str, Any]:
         """
         Start all application clients.
+
+        Args:
+            file_transfer_ue_indices: UE indices for file transfer clients
+            video_transcoding_ue_indices: UE indices for video transcoding clients
 
         Returns:
             Dictionary containing results for all clients
@@ -349,10 +389,18 @@ class AppClientExecutor:
         self.logger.info("Starting all application clients...")
 
         results = {
-            "file_transfer": self.start_file_transfer_client(),
-            "file_transfer_pmec": self.start_file_transfer_pmec_client(),
-            "video_transcoding": self.start_video_transcoding_client(),
-            "video_transcoding_pmec": self.start_video_transcoding_pmec_client(),
+            "file_transfer": self.start_file_transfer_client(
+                file_transfer_ue_indices
+            ),
+            "file_transfer_pmec": self.start_file_transfer_pmec_client(
+                file_transfer_ue_indices
+            ),
+            "video_transcoding": self.start_video_transcoding_client(
+                video_transcoding_ue_indices
+            ),
+            "video_transcoding_pmec": self.start_video_transcoding_pmec_client(
+                video_transcoding_ue_indices
+            ),
         }
 
         # Check overall success
