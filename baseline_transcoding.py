@@ -96,8 +96,8 @@ def start_experiment():
         "  - 5G gNB started on edge0 (PID:"
         f" {basic_results.get('5g_gnb_start', {}).get('pid', 'N/A')})"
     )
-    logger.info("Waiting 10 seconds before starting next step...")
-    time.sleep(10)
+    logger.info("Waiting 15 seconds before starting next step...")
+    time.sleep(15)
 
     # Network connectivity check
     logger.info("\n=== NETWORK CONNECTIVITY CHECK ===")

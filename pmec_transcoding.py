@@ -105,9 +105,9 @@ def start_experiment():
     )
     logger.info(f"  - PMEC controller started on edge0")
 
-    # Wait 10 seconds before starting next phase
-    logger.info("Waiting 10 seconds before starting PMEC servers...")
-    time.sleep(10)
+    # Wait 15 seconds before starting next phase
+    logger.info("Waiting 15 seconds before starting PMEC servers...")
+    time.sleep(15)
 
     # Network connectivity check
     logger.info("\n=== NETWORK CONNECTIVITY CHECK ===")
@@ -141,7 +141,7 @@ def start_experiment():
     logger.info(f"  - PMEC client started on amari")
 
     # Wait 3 seconds before starting app servers
-    logger.info("Waiting 3 seconds before starting application servers...")
+    logger.info("Waiting 10 seconds before starting application servers...")
     time.sleep(10)
 
     # Step 3: Start PMEC application servers on edge1
