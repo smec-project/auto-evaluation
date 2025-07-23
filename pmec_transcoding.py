@@ -219,7 +219,7 @@ def start_experiment():
 
     # Wait between client starts
     logger.info("Waiting 3 seconds before starting next client...")
-    time.sleep(2)
+    time.sleep(3)
 
     logger.info(
         "Starting file transfer PMEC client with UE indices:"
