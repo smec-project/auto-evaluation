@@ -143,10 +143,12 @@ class ThroughputTest:
         results = {
             "total_transferred": None,
             "average_bandwidth": None,
+            "average_bandwidth_numeric": None,  # Add numeric value for comparison
             "final_bandwidth": None,
             "intervals": [],
             "raw_output": output,
             "parse_success": False,
+            "bandwidth_warning": False,  # Add warning flag
         }
 
         try:
@@ -208,6 +210,11 @@ class ThroughputTest:
                     avg_bw = sum(bandwidth_values) / len(bandwidth_values)
                     # Assume Mbits/sec unit (most common)
                     results["average_bandwidth"] = f"{avg_bw:.2f} Mbits/sec"
+                    results["average_bandwidth_numeric"] = avg_bw
+
+                    # Check bandwidth threshold (75 Mbits/sec)
+                    if avg_bw < 75:
+                        results["bandwidth_warning"] = True
 
             results["parse_success"] = True
 
@@ -341,9 +348,25 @@ class ThroughputTest:
                 )
 
             if results["average_bandwidth"]:
-                self.logger.info(
-                    f"Average Bandwidth: {results['average_bandwidth']}"
-                )
+                # Check for bandwidth warning
+                if results.get("bandwidth_warning", False):
+                    self.logger.warning(
+                        "⚠️  AVERAGE BANDWIDTH WARNING:"
+                        f" {results['average_bandwidth']} (Below threshold of"
+                        " 75 Mbits/sec)"
+                    )
+                    self.logger.warning(
+                        "🚨 Network performance may be degraded. Please check:"
+                    )
+                    self.logger.warning("   - Network connectivity")
+                    self.logger.warning("   - UE namespace configuration")
+                    self.logger.warning("   - Edge server status")
+                    self.logger.warning("   - System resources")
+                else:
+                    self.logger.info(
+                        f"✓ Average Bandwidth: {results['average_bandwidth']} "
+                        "(Above threshold of 75 Mbits/sec)"
+                    )
 
             if results["total_transferred"]:
                 self.logger.info(
@@ -394,6 +417,7 @@ class ThroughputTest:
             "client_test": None,
             "parsed_results": None,
             "cleanup": None,
+            "bandwidth_warning": False,  # Add bandwidth warning flag
         }
 
         # Test connections first
@@ -435,6 +459,9 @@ class ThroughputTest:
                     client_result.get("output", "")
                 )
                 test_results["parsed_results"] = parsed_results
+                test_results["bandwidth_warning"] = parsed_results.get(
+                    "bandwidth_warning", False
+                )
 
                 # Display results
                 self.display_results(parsed_results)
@@ -457,7 +484,18 @@ class ThroughputTest:
         # Final status
         self.logger.info("\n" + "=" * 60)
         if test_results["success"]:
-            self.logger.info("THROUGHPUT TEST COMPLETED SUCCESSFULLY")
+            if test_results.get("bandwidth_warning", False):
+                self.logger.warning(
+                    "THROUGHPUT TEST COMPLETED WITH BANDWIDTH WARNING"
+                )
+                self.logger.warning(
+                    "⚠️  Average bandwidth is below 75 Mbits/sec threshold"
+                )
+            else:
+                self.logger.info("THROUGHPUT TEST COMPLETED SUCCESSFULLY")
+                self.logger.info(
+                    "✓ Average bandwidth is above 75 Mbits/sec threshold"
+                )
         else:
             self.logger.info("THROUGHPUT TEST FAILED")
         self.logger.info("=" * 60)
@@ -498,10 +536,20 @@ def main():
     # Print summary
     duration = end_time - start_time
     logger.info(f"\nTest Duration: {duration:.2f} seconds")
-    logger.info(f"Result: {'SUCCESS' if results['success'] else 'FAILED'}")
 
-    # Exit with appropriate code
-    sys.exit(0 if results["success"] else 1)
+    if results["success"]:
+        if results.get("bandwidth_warning", False):
+            logger.warning(
+                f"Result: SUCCESS WITH WARNING (Bandwidth below 75 Mbits/sec)"
+            )
+            # Exit with warning code (2) for bandwidth issues
+            sys.exit(2)
+        else:
+            logger.info(f"Result: SUCCESS (Bandwidth above 75 Mbits/sec)")
+            sys.exit(0)
+    else:
+        logger.error(f"Result: FAILED")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
