@@ -127,8 +127,14 @@ def deploy_environment(
     server_executor = AppServerExecutor()
 
     # Deploy servers based on the order they appear in JSON config file
+    server_count = 0
     for key in config.keys():
         if key.endswith("_ue_indices") and config[key] != "":
+            # Add 2 second delay between server deployments (except for the first one)
+            if server_count > 0:
+                logger.info("Waiting 2 seconds before starting next server...")
+                time.sleep(2)
+
             if key == "video_detection_ue_indices":
                 logger.info("Starting video detection server...")
                 if pmec_ue_indices != "":
@@ -139,6 +145,7 @@ def deploy_environment(
                     deployment_results["server_apps"][
                         "video_detection"
                     ] = server_executor.start_video_detection_server()
+                server_count += 1
 
             elif key == "transcoding_ue_indices":
                 logger.info("Starting video transcoding server...")
@@ -150,6 +157,7 @@ def deploy_environment(
                     deployment_results["server_apps"][
                         "video_transcoding"
                     ] = server_executor.start_video_transcoding_server()
+                server_count += 1
 
             elif key == "file_transfer_ue_indices":
                 logger.info("Starting file transfer server...")
@@ -161,6 +169,7 @@ def deploy_environment(
                     deployment_results["server_apps"][
                         "file_transfer"
                     ] = server_executor.start_file_transfer_server()
+                server_count += 1
 
     # Wait for servers to start
     if deployment_results["server_apps"]:
@@ -234,6 +243,10 @@ def deploy_environment(
                         client_executor.start_file_transfer_client(ue_indices)
                     )
                 client_count += 1
+
+    # Wait 2 seconds before generating final summary
+    logger.info("Waiting 2 seconds before generating deployment summary...")
+    time.sleep(2)
 
     # Check overall deployment success
     server_success = all(
