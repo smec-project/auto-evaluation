@@ -1,6 +1,6 @@
 {
     "num_ues": 10,
-    "pmec_ue_indices": "",
+    "pmec_ue_indices": "1,2",
     "video_detection_ue_indices": "1,2",
     "transcoding_ue_indices": "",
     "file_transfer_ue_indices": "3,4,5,6,7,8,9,10"
