@@ -71,7 +71,7 @@ class ConfigLoader:
         Returns:
             Comma-separated UE indices string
         """
-        return self.config_data.get("transcoding_ue_indices", "1,2")
+        return self.config_data.get("transcoding_ue_indices", "")
 
     def get_file_transfer_ue_indices(self) -> str:
         """
@@ -80,7 +80,7 @@ class ConfigLoader:
         Returns:
             Comma-separated UE indices string
         """
-        return self.config_data.get("file_transfer_ue_indices", "5,6,7,8")
+        return self.config_data.get("file_transfer_ue_indices", "")
 
     def get_pmec_ue_indices(self) -> str:
         """
@@ -89,7 +89,7 @@ class ConfigLoader:
         Returns:
             Comma-separated UE indices string
         """
-        return self.config_data.get("pmec_ue_indices", "1,2")
+        return self.config_data.get("pmec_ue_indices", "")
 
     def get_num_ues(self) -> int:
         """
@@ -179,23 +179,26 @@ class ConfigLoader:
 
         # Check required fields
         required_fields = [
-            "transcoding_ue_indices",
+            "num_ues",
             "file_transfer_ue_indices",
             "pmec_ue_indices",
+            "transcoding_ue_indices",
+            "video_detection_ue_indices",
         ]
         for field in required_fields:
             if field not in self.config_data:
                 errors.append(f"Missing required field: {field}")
 
-        # Validate UE indices format
+        # Validate UE indices format (skip num_ues as it's an integer)
         for field in required_fields:
+            if field == "num_ues":
+                continue  # Skip validation for num_ues as it's an integer
             if field in self.config_data:
                 ue_indices = self.config_data[field]
                 if not isinstance(ue_indices, str):
                     errors.append(f"{field} must be a string")
-                elif not ue_indices.strip():
-                    errors.append(f"{field} cannot be empty")
-                else:
+                # Allow empty strings for all values
+                elif ue_indices.strip():  # Only validate if not empty
                     # Try to parse indices
                     try:
                         indices = [
@@ -203,9 +206,9 @@ class ConfigLoader:
                             for idx in ue_indices.split(",")
                             if idx.strip()
                         ]
-                        if not indices:
-                            errors.append(f"{field} contains no valid indices")
-                        elif any(idx < 1 or idx > 8 for idx in indices):
+                        if indices and any(
+                            idx < 1 or idx > 8 for idx in indices
+                        ):
                             errors.append(
                                 f"{field} contains invalid UE indices (must be"
                                 " 1-8)"
