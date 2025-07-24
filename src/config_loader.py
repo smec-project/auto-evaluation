@@ -168,57 +168,6 @@ class ConfigLoader:
             "raw_config": self.config_data.copy(),
         }
 
-    def validate_config(self) -> Tuple[bool, list]:
-        """
-        Validate the configuration parameters.
-
-        Returns:
-            Tuple of (is_valid, list_of_errors)
-        """
-        errors = []
-
-        # Check required fields
-        required_fields = [
-            "num_ues",
-            "file_transfer_ue_indices",
-            "pmec_ue_indices",
-            "transcoding_ue_indices",
-            "video_detection_ue_indices",
-        ]
-        for field in required_fields:
-            if field not in self.config_data:
-                errors.append(f"Missing required field: {field}")
-
-        # Validate UE indices format (skip num_ues as it's an integer)
-        for field in required_fields:
-            if field == "num_ues":
-                continue  # Skip validation for num_ues as it's an integer
-            if field in self.config_data:
-                ue_indices = self.config_data[field]
-                if not isinstance(ue_indices, str):
-                    errors.append(f"{field} must be a string")
-                # Allow empty strings for all values
-                elif ue_indices.strip():  # Only validate if not empty
-                    # Try to parse indices
-                    try:
-                        indices = [
-                            int(idx.strip())
-                            for idx in ue_indices.split(",")
-                            if idx.strip()
-                        ]
-                        if indices and any(
-                            idx < 1 or idx > 8 for idx in indices
-                        ):
-                            errors.append(
-                                f"{field} contains invalid UE indices (must be"
-                                " 1-8)"
-                            )
-                    except ValueError:
-                        errors.append(f"{field} contains non-numeric values")
-
-        is_valid = len(errors) == 0
-        return is_valid, errors
-
     def print_config_summary(self):
         """Print a summary of the loaded configuration."""
         config = self.get_all_config()
@@ -257,13 +206,5 @@ def load_experiment_config(config_file: str) -> ConfigLoader:
         Exception: If configuration loading or validation fails
     """
     loader = ConfigLoader(config_file)
-
-    # Validate configuration
-    is_valid, errors = loader.validate_config()
-    if not is_valid:
-        error_msg = f"Configuration validation failed:\n" + "\n".join(
-            f"  - {error}" for error in errors
-        )
-        raise Exception(error_msg)
 
     return loader
