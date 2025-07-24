@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
 """
-Throughput Test Script
+Throughput Test Module
 
-This script runs network throughput tests using iperf3:
+This module provides throughput testing functionality using iperf3:
 - Starts iperf3 server on edge1
 - Runs iperf3 client on amari (in UE namespace)
 - Collects and displays results
 - Cleans up processes after completion
-
-Usage:
-    python throughput_test.py
 """
 
 import logging
 import time
-import sys
 import re
 from typing import Dict, Any, Optional
-from src.host_manager import HostManager
+from .host_manager import HostManager
 
 
 class ThroughputTest:
@@ -502,55 +498,86 @@ class ThroughputTest:
 
         return test_results
 
+    def run_multiple_ue_throughput_test(
+        self, ue_namespaces: list = None, duration: int = 10, interval: int = 2
+    ) -> Dict[str, Any]:
+        """
+        Run throughput tests for multiple UE namespaces.
 
-def print_usage():
-    """Print usage information."""
-    print("Throughput Test Script")
-    print("=" * 30)
-    print("Usage:")
-    print("  python throughput_test.py")
-    print("")
-    print("This script will:")
-    print("  1. Start iperf3 server on edge1")
-    print("  2. Run iperf3 client test from ue1 namespace on amari")
-    print("  3. Display throughput results")
-    print("  4. Clean up all iperf3 processes")
+        Args:
+            ue_namespaces: List of UE namespaces to test (default: ["ue1"])
+            duration: Test duration in seconds
+            interval: Reporting interval in seconds
 
+        Returns:
+            Dictionary containing all test results
+        """
+        if ue_namespaces is None:
+            ue_namespaces = ["ue1"]
 
-def main():
-    """Main function."""
-    # Setup logging
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
-    logger = logging.getLogger(__name__)
+        self.logger.info("=" * 60)
+        self.logger.info(
+            f"STARTING MULTI-UE THROUGHPUT TEST ({len(ue_namespaces)} UEs)"
+        )
+        self.logger.info("=" * 60)
 
-    # Create throughput test instance
-    throughput_test = ThroughputTest()
+        all_results = {
+            "overall_success": True,
+            "tests": {},
+            "summary": {
+                "total_ues": len(ue_namespaces),
+                "successful_tests": 0,
+                "failed_tests": 0,
+                "bandwidth_warnings": 0,
+            },
+        }
 
-    # Run the test
-    start_time = time.time()
-    results = throughput_test.run_throughput_test()
-    end_time = time.time()
+        for ue_namespace in ue_namespaces:
+            self.logger.info(f"\n{'='*60}")
+            self.logger.info(f"TESTING UE NAMESPACE: {ue_namespace}")
+            self.logger.info(f"{'='*60}")
 
-    # Print summary
-    duration = end_time - start_time
-    logger.info(f"\nTest Duration: {duration:.2f} seconds")
-
-    if results["success"]:
-        if results.get("bandwidth_warning", False):
-            logger.warning(
-                f"Result: SUCCESS WITH WARNING (Bandwidth below 75 Mbits/sec)"
+            test_result = self.run_throughput_test(
+                ue_namespace, duration, interval
             )
-            # Exit with warning code (2) for bandwidth issues
-            sys.exit(2)
+            all_results["tests"][ue_namespace] = test_result
+
+            if test_result["success"]:
+                all_results["summary"]["successful_tests"] += 1
+                if test_result.get("bandwidth_warning", False):
+                    all_results["summary"]["bandwidth_warnings"] += 1
+            else:
+                all_results["summary"]["failed_tests"] += 1
+                all_results["overall_success"] = False
+
+        # Final summary
+        self.logger.info("\n" + "=" * 60)
+        self.logger.info("MULTI-UE THROUGHPUT TEST SUMMARY")
+        self.logger.info("=" * 60)
+        self.logger.info(
+            f"Total UEs tested: {all_results['summary']['total_ues']}"
+        )
+        self.logger.info(
+            f"Successful tests: {all_results['summary']['successful_tests']}"
+        )
+        self.logger.info(
+            f"Failed tests: {all_results['summary']['failed_tests']}"
+        )
+        self.logger.info(
+            "Bandwidth warnings:"
+            f" {all_results['summary']['bandwidth_warnings']}"
+        )
+
+        if all_results["overall_success"]:
+            if all_results["summary"]["bandwidth_warnings"] > 0:
+                self.logger.warning(
+                    "MULTI-UE TEST COMPLETED WITH BANDWIDTH WARNINGS"
+                )
+            else:
+                self.logger.info("MULTI-UE TEST COMPLETED SUCCESSFULLY")
         else:
-            logger.info(f"Result: SUCCESS (Bandwidth above 75 Mbits/sec)")
-            sys.exit(0)
-    else:
-        logger.error(f"Result: FAILED")
-        sys.exit(1)
+            self.logger.error("MULTI-UE TEST FAILED")
 
+        self.logger.info("=" * 60)
 
-if __name__ == "__main__":
-    main()
+        return all_results
