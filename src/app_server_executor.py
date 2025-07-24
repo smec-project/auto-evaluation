@@ -352,15 +352,187 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video Detection Server Functions
+    def start_video_detection_server(
+        self, instance_count: int = 2
+    ) -> Dict[str, Any]:
+        """
+        Start video detection server on edge1.
+
+        Args:
+            instance_count: Number of server instances to start
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video detection server on edge1 with"
+            f" {instance_count} instances..."
+        )
+
+        command = (
+            "cd ~/edge-server-scheduler/edge-apps/video-detection && "
+            f"python3 run.py {instance_count}"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="edge1",
+                command=command,
+                session_name="video_detection",
+            )
+
+            if result["success"]:
+                self.logger.info("Video detection server started successfully")
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    f"Failed to start video detection server: {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "edge1",
+            }
+
+    def stop_video_detection_server(self) -> Dict[str, Any]:
+        """
+        Stop video detection server on edge1.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video detection server on edge1...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_detection 2>/dev/null || true; "
+                "sudo pkill -f 'video_detector' 2>/dev/null || true; "
+                "sudo pkill -f 'yolo_detection.py' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="edge1", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video detection server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
+    # Video Detection PMEC Server Functions
+    def start_video_detection_pmec_server(
+        self, instance_count: int = 2
+    ) -> Dict[str, Any]:
+        """
+        Start video detection PMEC server on edge1.
+
+        Args:
+            instance_count: Number of server instances to start
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video detection PMEC server on edge1 with"
+            f" {instance_count} instances..."
+        )
+
+        command = (
+            "cd ~/edge-server-scheduler/edge-apps/video-detection-pmec && "
+            f"python3 run.py {instance_count}"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="edge1",
+                command=command,
+                session_name="video_detection_pmec",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "Video detection PMEC server started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start video detection PMEC server:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection PMEC server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "edge1",
+            }
+
+    def stop_video_detection_pmec_server(self) -> Dict[str, Any]:
+        """
+        Stop video detection PMEC server on edge1.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video detection PMEC server on edge1...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_detection_pmec 2>/dev/null || true;"
+                " sudo pkill -f 'video_detector' 2>/dev/null || true; sudo"
+                " pkill -f 'yolo_detection.py' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="edge1", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video detection PMEC server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection PMEC server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Batch Operations
     def start_all_servers(
-        self, video_transcoding_instance_count: int = 2
+        self,
+        video_transcoding_instance_count: int = 2,
+        video_detection_instance_count: int = 2,
+        video_detection_pmec_instance_count: int = 2,
     ) -> Dict[str, Any]:
         """
         Start all application servers.
 
         Args:
             video_transcoding_instance_count: Number of instances for video transcoding servers
+            video_detection_instance_count: Number of instances for video detection server
+            video_detection_pmec_instance_count: Number of instances for video detection PMEC server
 
         Returns:
             Dictionary containing results for all servers
@@ -375,6 +547,12 @@ class AppServerExecutor:
             ),
             "video_transcoding_pmec": self.start_video_transcoding_pmec_server(
                 video_transcoding_instance_count
+            ),
+            "video_detection": self.start_video_detection_server(
+                video_detection_instance_count
+            ),
+            "video_detection_pmec": self.start_video_detection_pmec_server(
+                video_detection_pmec_instance_count
             ),
         }
 
@@ -403,6 +581,8 @@ class AppServerExecutor:
             "file_server_pmec": self.stop_file_transfer_pmec_server(),
             "video_transcoding": self.stop_video_transcoding_server(),
             "video_transcoding_pmec": self.stop_video_transcoding_pmec_server(),
+            "video_detection": self.stop_video_detection_server(),
+            "video_detection_pmec": self.stop_video_detection_pmec_server(),
         }
 
         # Check overall success
@@ -440,6 +620,8 @@ class AppServerExecutor:
                 "file_server_pmec": False,
                 "video_transcoding": False,
                 "video_transcoding_pmec": False,
+                "video_detection": False,
+                "video_detection_pmec": False,
                 "tmux_output": result.get("output", ""),
             }
 
@@ -451,6 +633,10 @@ class AppServerExecutor:
                 status["video_transcoding_pmec"] = (
                     "video_transcoding_pmec:" in output
                 )
+                status["video_detection"] = "video_detection:" in output
+                status["video_detection_pmec"] = (
+                    "video_detection_pmec:" in output
+                )
 
             return status
 
@@ -461,5 +647,7 @@ class AppServerExecutor:
                 "file_server_pmec": False,
                 "video_transcoding": False,
                 "video_transcoding_pmec": False,
+                "video_detection": False,
+                "video_detection_pmec": False,
                 "error": str(e),
             }

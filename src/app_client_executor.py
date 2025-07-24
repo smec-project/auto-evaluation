@@ -370,11 +370,180 @@ class AppClientExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video Detection Client Functions
+    def start_video_detection_client(
+        self, ue_indices: str = "1,2"
+    ) -> Dict[str, Any]:
+        """
+        Start video detection client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video detection client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
+
+        command = (
+            "cd ~/edge-client-prober/edge-apps/video-detection && python3"
+            " run_amarisoft.py"
+            f" ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps.mp4 {ue_indices}"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="amari",
+                command=command,
+                session_name="video_detection",
+            )
+
+            if result["success"]:
+                self.logger.info("Video detection client started successfully")
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    f"Failed to start video detection client: {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection client startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "amari",
+            }
+
+    def stop_video_detection_client(self) -> Dict[str, Any]:
+        """
+        Stop video detection client on amari.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video detection client on amari...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_detection 2>/dev/null || true; "
+                "sudo pkill -f 'video_detection_client' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="amari", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video detection client stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection client cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
+    # Video Detection PMEC Client Functions
+    def start_video_detection_pmec_client(
+        self, ue_indices: str = "1,2"
+    ) -> Dict[str, Any]:
+        """
+        Start video detection PMEC client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video detection PMEC client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
+
+        command = (
+            "cd ~/edge-client-prober/edge-apps/video-detection-pmec && python3"
+            " run_amarisoft.py"
+            f" ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps.mp4 {ue_indices}"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="amari",
+                command=command,
+                session_name="video_detection_pmec",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "Video detection PMEC client started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start video detection PMEC client:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection PMEC client startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "amari",
+            }
+
+    def stop_video_detection_pmec_client(self) -> Dict[str, Any]:
+        """
+        Stop video detection PMEC client on amari.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video detection PMEC client on amari...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_detection_pmec 2>/dev/null || true;"
+                " sudo pkill -f 'video_detection_client' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="amari", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video detection PMEC client stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection PMEC client cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Batch Operations
     def start_all_clients(
         self,
         file_transfer_ue_indices: str = "5,6,7,8",
         video_transcoding_ue_indices: str = "1,2",
+        video_detection_ue_indices: str = "1,2",
+        video_detection_pmec_ue_indices: str = "1,2",
     ) -> Dict[str, Any]:
         """
         Start all application clients.
@@ -382,6 +551,8 @@ class AppClientExecutor:
         Args:
             file_transfer_ue_indices: UE indices for file transfer clients
             video_transcoding_ue_indices: UE indices for video transcoding clients
+            video_detection_ue_indices: UE indices for video detection clients
+            video_detection_pmec_ue_indices: UE indices for video detection PMEC clients
 
         Returns:
             Dictionary containing results for all clients
@@ -400,6 +571,12 @@ class AppClientExecutor:
             ),
             "video_transcoding_pmec": self.start_video_transcoding_pmec_client(
                 video_transcoding_ue_indices
+            ),
+            "video_detection": self.start_video_detection_client(
+                video_detection_ue_indices
+            ),
+            "video_detection_pmec": self.start_video_detection_pmec_client(
+                video_detection_pmec_ue_indices
             ),
         }
 
@@ -428,6 +605,8 @@ class AppClientExecutor:
             "file_transfer_pmec": self.stop_file_transfer_pmec_client(),
             "video_transcoding": self.stop_video_transcoding_client(),
             "video_transcoding_pmec": self.stop_video_transcoding_pmec_client(),
+            "video_detection": self.stop_video_detection_client(),
+            "video_detection_pmec": self.stop_video_detection_pmec_client(),
         }
 
         # Check overall success
@@ -465,6 +644,8 @@ class AppClientExecutor:
                 "file_transfer_pmec": False,
                 "video_transcoding": False,
                 "video_transcoding_pmec": False,
+                "video_detection": False,
+                "video_detection_pmec": False,
                 "tmux_output": result.get("output", ""),
             }
 
@@ -476,6 +657,10 @@ class AppClientExecutor:
                 status["video_transcoding_pmec"] = (
                     "video_transcoding_pmec:" in output
                 )
+                status["video_detection"] = "video_detection:" in output
+                status["video_detection_pmec"] = (
+                    "video_detection_pmec:" in output
+                )
 
             return status
 
@@ -486,5 +671,7 @@ class AppClientExecutor:
                 "file_transfer_pmec": False,
                 "video_transcoding": False,
                 "video_transcoding_pmec": False,
+                "video_detection": False,
+                "video_detection_pmec": False,
                 "error": str(e),
             }
