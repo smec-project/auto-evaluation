@@ -91,6 +91,15 @@ class ConfigLoader:
         """
         return self.config_data.get("pmec_ue_indices", "1,2")
 
+    def get_num_ues(self) -> int:
+        """
+        Get the number of UE namespaces configured.
+
+        Returns:
+            Number of UE namespaces (default: 8)
+        """
+        return self.config_data.get("num_ues", 8)
+
     def calculate_server_instances(self, ue_indices: str) -> int:
         """
         Calculate the number of server instances based on UE indices.

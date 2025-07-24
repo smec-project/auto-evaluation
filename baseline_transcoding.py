@@ -88,6 +88,7 @@ def start_experiment():
     transcoding_ue_indices = config.get_transcoding_ue_indices()
     file_transfer_ue_indices = config.get_file_transfer_ue_indices()
     transcoding_server_instances = config.get_transcoding_server_instances()
+    num_ues = config.get_num_ues()
 
     # Test connections first
     if not test_connections():
@@ -124,7 +125,7 @@ def start_experiment():
 
     # Network connectivity check
     logger.info("\n=== NETWORK CONNECTIVITY CHECK ===")
-    ping_test = AmariPingTest()
+    ping_test = AmariPingTest(num_ues=num_ues)
     if not ping_test.quick_health_check():
         logger.error("Network connectivity check failed, aborting experiment")
         return False

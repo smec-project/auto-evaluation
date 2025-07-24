@@ -2,7 +2,8 @@
 """
 Amari Ping Test
 
-This script runs ping tests from multiple UE network namespaces (ue1-ue8) on amari host:
+This script runs ping tests from multiple UE network namespaces on amari host:
+- Supports configurable number of UE namespaces (default: 8)
 - Runs ping tests concurrently using multithreading
 - Tests connectivity from each UE namespace to 192.168.2.3
 - Waits for all ping tests to complete and reports health status
@@ -17,16 +18,20 @@ from .host_manager import HostManager
 
 
 class AmariPingTest:
-    """Ping test executor for UE network namespaces on amari."""
+    """Ping test executor for configurable number of UE network namespaces on amari."""
 
-    def __init__(self, config_file: str = "hosts_config.yaml"):
+    def __init__(
+        self, config_file: str = "hosts_config.yaml", num_ues: int = 8
+    ):
         """
         Initialize the ping test executor.
 
         Args:
             config_file: Path to the host configuration file
+            num_ues: Number of UE namespaces to test (default: 8)
         """
         self.host_manager = HostManager(config_file)
+        self.num_ues = num_ues
         self.setup_logging()
 
     def setup_logging(self):
@@ -42,7 +47,7 @@ class AmariPingTest:
         Run ping test for a single UE namespace.
 
         Args:
-            ue_id: UE ID (1-8)
+            ue_id: UE ID (starting from 1)
 
         Returns:
             Dictionary containing ping test results
@@ -165,18 +170,21 @@ class AmariPingTest:
         return stats
 
     def run_all_ping_tests(
-        self, max_workers: int = 8, quiet: bool = False
+        self, max_workers: int = None, quiet: bool = False
     ) -> Dict[str, Any]:
         """
-        Run ping tests for all UE namespaces (ue1-ue8) concurrently.
+        Run ping tests for all UE namespaces concurrently.
 
         Args:
-            max_workers: Maximum number of concurrent threads
+            max_workers: Maximum number of concurrent threads (default: same as num_ues)
             quiet: If True, only log summary without detailed per-UE logs
 
         Returns:
             Dictionary containing results for all ping tests
         """
+
+        if max_workers is None:
+            max_workers = self.num_ues
         if not quiet:
             self.logger.info("=" * 60)
             self.logger.info("STARTING AMARI UE PING TESTS")
@@ -185,12 +193,12 @@ class AmariPingTest:
         start_time = time.time()
         results = {}
 
-        # Run ping tests concurrently for UE1-UE8
+        # Run ping tests concurrently for all configured UEs
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all ping test tasks
             future_to_ue = {
                 executor.submit(self.ping_single_ue, ue_id): ue_id
-                for ue_id in range(1, 9)
+                for ue_id in range(1, self.num_ues + 1)
             }
 
             # Collect results as they complete
@@ -373,7 +381,7 @@ class AmariPingTest:
         self.logger.info("Running network connectivity check...")
 
         try:
-            results = self.run_all_ping_tests(max_workers=8, quiet=True)
+            results = self.run_all_ping_tests(quiet=True)
             health_status = results["health_report"]["health_status"]
             success_rate = results["health_report"]["success_rate_percent"]
 
