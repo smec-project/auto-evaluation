@@ -82,6 +82,15 @@ class ConfigLoader:
         """
         return self.config_data.get("file_transfer_ue_indices", "")
 
+    def get_video_detection_ue_indices(self) -> str:
+        """
+        Get UE indices for video detection applications.
+
+        Returns:
+            Comma-separated UE indices string
+        """
+        return self.config_data.get("video_detection_ue_indices", "")
+
     def get_pmec_ue_indices(self) -> str:
         """
         Get UE indices for PMEC controller.
@@ -147,6 +156,16 @@ class ConfigLoader:
         transcoding_ues = self.get_transcoding_ue_indices()
         return self.calculate_server_instances(transcoding_ues)
 
+    def get_video_detection_server_instances(self) -> int:
+        """
+        Get the number of video detection server instances.
+
+        Returns:
+            Number of video detection server instances
+        """
+        detection_ues = self.get_video_detection_ue_indices()
+        return self.calculate_server_instances(detection_ues)
+
     def get_all_config(self) -> Dict[str, Any]:
         """
         Get all configuration parameters.
@@ -156,14 +175,19 @@ class ConfigLoader:
         """
         transcoding_ues = self.get_transcoding_ue_indices()
         file_transfer_ues = self.get_file_transfer_ue_indices()
+        video_detection_ues = self.get_video_detection_ue_indices()
         pmec_ues = self.get_pmec_ue_indices()
 
         return {
             "transcoding_ue_indices": transcoding_ues,
             "file_transfer_ue_indices": file_transfer_ues,
+            "video_detection_ue_indices": video_detection_ues,
             "pmec_ue_indices": pmec_ues,
             "transcoding_server_instances": self.calculate_server_instances(
                 transcoding_ues
+            ),
+            "video_detection_server_instances": self.calculate_server_instances(
+                video_detection_ues
             ),
             "raw_config": self.config_data.copy(),
         }
@@ -180,6 +204,10 @@ class ConfigLoader:
             f"Video transcoding UE indices: {config['transcoding_ue_indices']}"
         )
         self.logger.info(
+            "Video detection UE indices:"
+            f" {config['video_detection_ue_indices']}"
+        )
+        self.logger.info(
             f"File transfer UE indices: {config['file_transfer_ue_indices']}"
         )
         self.logger.info(
@@ -188,6 +216,10 @@ class ConfigLoader:
         self.logger.info(
             "Video transcoding server instances:"
             f" {config['transcoding_server_instances']}"
+        )
+        self.logger.info(
+            "Video detection server instances:"
+            f" {config['video_detection_server_instances']}"
         )
         self.logger.info("=" * 50)
 

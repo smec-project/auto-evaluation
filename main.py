@@ -28,6 +28,7 @@ from src.pmec_controller import PMECController
 from src.app_server_executor import AppServerExecutor
 from src.app_client_executor import AppClientExecutor
 from src.throughput_test import ThroughputTest
+from src.config_loader import ConfigLoader
 
 
 def setup_logging():
@@ -54,19 +55,23 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
 
 def deploy_environment(
-    config: Dict[str, Any], logger: logging.Logger
+    config: Dict[str, Any], config_path: str, logger: logging.Logger
 ) -> Dict[str, Any]:
     """
     Deploy the experimental environment based on configuration.
 
     Args:
         config: Configuration dictionary
+        config_path: Path to configuration file
         logger: Logger instance
 
     Returns:
         Dictionary containing deployment results
     """
     logger.info("Starting environment deployment...")
+
+    # Create ConfigLoader instance for calculating server instances
+    experiment_config = ConfigLoader(config_path)
 
     num_ues = config.get("num_ues", 8)
     pmec_ue_indices = config.get("pmec_ue_indices", "")
@@ -137,26 +142,40 @@ def deploy_environment(
 
             if key == "video_detection_ue_indices":
                 logger.info("Starting video detection server...")
+                detection_instances = (
+                    experiment_config.get_video_detection_server_instances()
+                )
                 if pmec_ue_indices != "":
                     deployment_results["server_apps"][
                         "video_detection_pmec"
-                    ] = server_executor.start_video_detection_pmec_server()
+                    ] = server_executor.start_video_detection_pmec_server(
+                        detection_instances
+                    )
                 else:
-                    deployment_results["server_apps"][
-                        "video_detection"
-                    ] = server_executor.start_video_detection_server()
+                    deployment_results["server_apps"]["video_detection"] = (
+                        server_executor.start_video_detection_server(
+                            detection_instances
+                        )
+                    )
                 server_count += 1
 
             elif key == "transcoding_ue_indices":
                 logger.info("Starting video transcoding server...")
+                transcoding_instances = (
+                    experiment_config.get_transcoding_server_instances()
+                )
                 if pmec_ue_indices != "":
                     deployment_results["server_apps"][
                         "video_transcoding_pmec"
-                    ] = server_executor.start_video_transcoding_pmec_server()
+                    ] = server_executor.start_video_transcoding_pmec_server(
+                        transcoding_instances
+                    )
                 else:
-                    deployment_results["server_apps"][
-                        "video_transcoding"
-                    ] = server_executor.start_video_transcoding_server()
+                    deployment_results["server_apps"]["video_transcoding"] = (
+                        server_executor.start_video_transcoding_server(
+                            transcoding_instances
+                        )
+                    )
                 server_count += 1
 
             elif key == "file_transfer_ue_indices":
@@ -406,7 +425,7 @@ def main(config_path: str, operation: int) -> int:
         if operation == 0:
             # Deploy operation
             logger.info("Starting deployment operation...")
-            results = deploy_environment(config, logger)
+            results = deploy_environment(config, config_path, logger)
 
             if results["overall_success"]:
                 logger.info("Deployment completed successfully!")
