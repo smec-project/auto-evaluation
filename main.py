@@ -192,8 +192,8 @@ def deploy_environment(
 
     # Wait for servers to start
     if deployment_results["server_apps"]:
-        logger.info("Waiting 10 seconds for server applications to start...")
-        time.sleep(10)
+        logger.info("Waiting 15 seconds for server applications to start...")
+        time.sleep(15)
 
     # Step 5: Deploy client applications based on config order
     logger.info("Deploying client applications...")
