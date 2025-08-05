@@ -7,6 +7,8 @@ This module manages various application servers on edge1 host:
 - File Transfer PMEC Server
 - Video Transcoding Server
 - Video Transcoding PMEC Server
+- Video SR Server
+- Video SR PMEC Server
 """
 
 import logging
@@ -519,12 +521,170 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video SR Server Functions
+    def start_video_sr_server(self, instance_count: int = 2) -> Dict[str, Any]:
+        """
+        Start video SR server on edge1.
+
+        Args:
+            instance_count: Number of server instances to start
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video SR server on edge1 with"
+            f" {instance_count} instances..."
+        )
+
+        command = (
+            "cd ~/edge-server-scheduler/edge-apps/video-sr && "
+            f"python3 run.py {instance_count}"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="edge1",
+                command=command,
+                session_name="video_sr",
+            )
+
+            if result["success"]:
+                self.logger.info("Video SR server started successfully")
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    f"Failed to start video SR server: {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Exception during video SR server startup: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "edge1",
+            }
+
+    def stop_video_sr_server(self) -> Dict[str, Any]:
+        """
+        Stop video SR server on edge1.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video SR server on edge1...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_sr 2>/dev/null || true; "
+                "sudo pkill -f 'video_sr_server' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="edge1", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video SR server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Exception during video SR server cleanup: {e}")
+            return {"success": False, "error": str(e)}
+
+    # Video SR PMEC Server Functions
+    def start_video_sr_pmec_server(
+        self, instance_count: int = 2
+    ) -> Dict[str, Any]:
+        """
+        Start video SR PMEC server on edge1.
+
+        Args:
+            instance_count: Number of server instances to start
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video SR PMEC server on edge1 with"
+            f" {instance_count} instances..."
+        )
+
+        command = (
+            "cd ~/edge-server-scheduler/edge-apps/video-sr-pmec && "
+            f"python3 run.py {instance_count}"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="edge1",
+                command=command,
+                session_name="video_sr_pmec",
+            )
+
+            if result["success"]:
+                self.logger.info("Video SR PMEC server started successfully")
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    f"Failed to start video SR PMEC server: {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video SR PMEC server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "edge1",
+            }
+
+    def stop_video_sr_pmec_server(self) -> Dict[str, Any]:
+        """
+        Stop video SR PMEC server on edge1.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video SR PMEC server on edge1...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_sr_pmec 2>/dev/null || true; "
+                "sudo pkill -f 'video_sr_server' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="edge1", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video SR PMEC server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video SR PMEC server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Batch Operations
     def start_all_servers(
         self,
         video_transcoding_instance_count: int = 2,
         video_detection_instance_count: int = 2,
         video_detection_pmec_instance_count: int = 2,
+        video_sr_instance_count: int = 2,
+        video_sr_pmec_instance_count: int = 2,
     ) -> Dict[str, Any]:
         """
         Start all application servers.
@@ -533,6 +693,8 @@ class AppServerExecutor:
             video_transcoding_instance_count: Number of instances for video transcoding servers
             video_detection_instance_count: Number of instances for video detection server
             video_detection_pmec_instance_count: Number of instances for video detection PMEC server
+            video_sr_instance_count: Number of instances for video SR server
+            video_sr_pmec_instance_count: Number of instances for video SR PMEC server
 
         Returns:
             Dictionary containing results for all servers
@@ -553,6 +715,10 @@ class AppServerExecutor:
             ),
             "video_detection_pmec": self.start_video_detection_pmec_server(
                 video_detection_pmec_instance_count
+            ),
+            "video_sr": self.start_video_sr_server(video_sr_instance_count),
+            "video_sr_pmec": self.start_video_sr_pmec_server(
+                video_sr_pmec_instance_count
             ),
         }
 
@@ -583,6 +749,8 @@ class AppServerExecutor:
             "video_transcoding_pmec": self.stop_video_transcoding_pmec_server(),
             "video_detection": self.stop_video_detection_server(),
             "video_detection_pmec": self.stop_video_detection_pmec_server(),
+            "video_sr": self.stop_video_sr_server(),
+            "video_sr_pmec": self.stop_video_sr_pmec_server(),
         }
 
         # Check overall success
@@ -622,6 +790,8 @@ class AppServerExecutor:
                 "video_transcoding_pmec": False,
                 "video_detection": False,
                 "video_detection_pmec": False,
+                "video_sr": False,
+                "video_sr_pmec": False,
                 "tmux_output": result.get("output", ""),
             }
 
@@ -637,6 +807,8 @@ class AppServerExecutor:
                 status["video_detection_pmec"] = (
                     "video_detection_pmec:" in output
                 )
+                status["video_sr"] = "video_sr:" in output
+                status["video_sr_pmec"] = "video_sr_pmec:" in output
 
             return status
 
@@ -649,5 +821,7 @@ class AppServerExecutor:
                 "video_transcoding_pmec": False,
                 "video_detection": False,
                 "video_detection_pmec": False,
+                "video_sr": False,
+                "video_sr_pmec": False,
                 "error": str(e),
             }

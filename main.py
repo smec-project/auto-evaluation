@@ -190,6 +190,25 @@ def deploy_environment(
                     ] = server_executor.start_file_transfer_server()
                 server_count += 1
 
+            elif key == "video_sr_ue_indices":
+                logger.info("Starting video SR server...")
+                video_sr_instances = (
+                    experiment_config.get_video_sr_server_instances()
+                )
+                if pmec_ue_indices != "":
+                    deployment_results["server_apps"]["video_sr_pmec"] = (
+                        server_executor.start_video_sr_pmec_server(
+                            video_sr_instances
+                        )
+                    )
+                else:
+                    deployment_results["server_apps"]["video_sr"] = (
+                        server_executor.start_video_sr_server(
+                            video_sr_instances
+                        )
+                    )
+                server_count += 1
+
     # Wait for servers to start
     if deployment_results["server_apps"]:
         logger.info("Waiting 15 seconds for server applications to start...")
@@ -260,6 +279,20 @@ def deploy_environment(
                 else:
                     deployment_results["client_apps"]["file_transfer"] = (
                         client_executor.start_file_transfer_client(ue_indices)
+                    )
+                client_count += 1
+
+            elif key == "video_sr_ue_indices":
+                logger.info(
+                    f"Starting video SR client with UE indices: {ue_indices}"
+                )
+                if pmec_ue_indices != "":
+                    deployment_results["client_apps"]["video_sr_pmec"] = (
+                        client_executor.start_video_sr_pmec_client(ue_indices)
+                    )
+                else:
+                    deployment_results["client_apps"]["video_sr"] = (
+                        client_executor.start_video_sr_client(ue_indices)
                     )
                 client_count += 1
 

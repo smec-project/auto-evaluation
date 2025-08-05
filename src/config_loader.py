@@ -100,6 +100,15 @@ class ConfigLoader:
         """
         return self.config_data.get("pmec_ue_indices", "")
 
+    def get_video_sr_ue_indices(self) -> str:
+        """
+        Get UE indices for video SR applications.
+
+        Returns:
+            Comma-separated UE indices string
+        """
+        return self.config_data.get("video_sr_ue_indices", "")
+
     def get_num_ues(self) -> int:
         """
         Get the number of UE namespaces configured.
@@ -166,6 +175,16 @@ class ConfigLoader:
         detection_ues = self.get_video_detection_ue_indices()
         return self.calculate_server_instances(detection_ues)
 
+    def get_video_sr_server_instances(self) -> int:
+        """
+        Get the number of video SR server instances.
+
+        Returns:
+            Number of video SR server instances
+        """
+        video_sr_ues = self.get_video_sr_ue_indices()
+        return self.calculate_server_instances(video_sr_ues)
+
     def get_all_config(self) -> Dict[str, Any]:
         """
         Get all configuration parameters.
@@ -176,18 +195,23 @@ class ConfigLoader:
         transcoding_ues = self.get_transcoding_ue_indices()
         file_transfer_ues = self.get_file_transfer_ue_indices()
         video_detection_ues = self.get_video_detection_ue_indices()
+        video_sr_ues = self.get_video_sr_ue_indices()
         pmec_ues = self.get_pmec_ue_indices()
 
         return {
             "transcoding_ue_indices": transcoding_ues,
             "file_transfer_ue_indices": file_transfer_ues,
             "video_detection_ue_indices": video_detection_ues,
+            "video_sr_ue_indices": video_sr_ues,
             "pmec_ue_indices": pmec_ues,
             "transcoding_server_instances": self.calculate_server_instances(
                 transcoding_ues
             ),
             "video_detection_server_instances": self.calculate_server_instances(
                 video_detection_ues
+            ),
+            "video_sr_server_instances": self.calculate_server_instances(
+                video_sr_ues
             ),
             "raw_config": self.config_data.copy(),
         }
@@ -208,6 +232,9 @@ class ConfigLoader:
             f" {config['video_detection_ue_indices']}"
         )
         self.logger.info(
+            f"Video SR UE indices: {config['video_sr_ue_indices']}"
+        )
+        self.logger.info(
             f"File transfer UE indices: {config['file_transfer_ue_indices']}"
         )
         self.logger.info(
@@ -220,6 +247,9 @@ class ConfigLoader:
         self.logger.info(
             "Video detection server instances:"
             f" {config['video_detection_server_instances']}"
+        )
+        self.logger.info(
+            f"Video SR server instances: {config['video_sr_server_instances']}"
         )
         self.logger.info("=" * 50)
 
