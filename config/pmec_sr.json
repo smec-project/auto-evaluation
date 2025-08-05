@@ -1,0 +1,8 @@
+{
+    "num_ues": 1,
+    "pmec_ue_indices": "1",
+    "video_detection_ue_indices": "",
+    "transcoding_ue_indices": "",
+    "video_sr_ue_indices": "1",
+    "file_transfer_ue_indices": ""
+}
