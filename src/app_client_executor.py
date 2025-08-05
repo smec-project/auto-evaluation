@@ -57,7 +57,7 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/file-transfer && "
-            f"python3 run_amarisoft.py {ue_indices}"
+            f"python3 run_amarisoft.py {ue_indices} && tail -f /dev/null"
         )
 
         try:
@@ -136,7 +136,7 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/file-transfer-pmec && "
-            f"python3 run_amarisoft.py {ue_indices}"
+            f"python3 run_amarisoft.py {ue_indices} && tail -f /dev/null"
         )
 
         try:
@@ -221,7 +221,8 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding && python3"
             " run_amarisoft.py"
-            f" ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 {ue_indices}"
+            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4"
+            f" {ue_indices} && tail -f /dev/null"
         )
 
         try:
@@ -306,7 +307,8 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding-pmec &&"
             " python3 run_amarisoft.py"
-            f" ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4 {ue_indices}"
+            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4"
+            f" {ue_indices} && tail -f /dev/null"
         )
 
         try:
@@ -393,7 +395,8 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-detection && python3"
             " run_amarisoft.py"
-            f" ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps.mp4 {ue_indices}"
+            " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps.mp4"
+            f" {ue_indices} && tail -f /dev/null"
         )
 
         try:
@@ -475,7 +478,8 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-detection-pmec && python3"
             " run_amarisoft.py"
-            f" ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps.mp4 {ue_indices}"
+            " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps.mp4"
+            f" {ue_indices} && tail -f /dev/null"
         )
 
         try:
@@ -557,8 +561,8 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/video-sr && python3"
-            " run_amarisoft.py"
-            f" ~/video/201_320x180_25fps_qp22_loop20.mp4 {ue_indices}"
+            " run_amarisoft.py ~/video/201_320x180_25fps_qp22_loop20.mp4"
+            f" {ue_indices} && tail -f /dev/null"
         )
 
         try:
@@ -635,8 +639,8 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/video-sr-pmec && python3"
-            " run_amarisoft.py"
-            f" ~/video/201_320x180_25fps_qp22_loop20.mp4 {ue_indices}"
+            " run_amarisoft.py ~/video/201_320x180_25fps_qp22_loop20.mp4"
+            f" {ue_indices} && tail -f /dev/null"
         )
 
         try:

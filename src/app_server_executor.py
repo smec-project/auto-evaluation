@@ -203,8 +203,8 @@ class AppServerExecutor:
         )
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding && "
-            f"taskset -c 0-11 python3 run.py {instance_count}"
+            "cd ~/edge-server-scheduler/edge-apps/video-transcoding && taskset"
+            f" -c 0-11 python3 run.py {instance_count} && tail -f /dev/null"
         )
 
         try:
@@ -288,7 +288,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding-pmec && "
-            f"python3 run.py {instance_count}"
+            f"python3 run.py {instance_count} && tail -f /dev/null"
         )
 
         try:
@@ -374,7 +374,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-detection && "
-            f"python3 run.py {instance_count}"
+            f"python3 run.py {instance_count} && tail -f /dev/null"
         )
 
         try:
@@ -456,7 +456,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-detection-pmec && "
-            f"python3 run.py {instance_count}"
+            f"python3 run.py {instance_count} && tail -f /dev/null"
         )
 
         try:
@@ -539,7 +539,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-sr && "
-            f"python3 run.py {instance_count}"
+            f"python3 run.py {instance_count} && tail -f /dev/null"
         )
 
         try:
@@ -616,7 +616,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-sr-pmec && "
-            f"python3 run.py {instance_count}"
+            f"python3 run.py {instance_count} && tail -f /dev/null"
         )
 
         try:
