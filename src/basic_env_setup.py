@@ -104,6 +104,10 @@ class BasicEnvSetup:
         except Exception as e:
             self.logger.warning(f"Exception during UHD reset: {e}")
 
+        # Wait 2 seconds after UHD reset before starting gNB
+        self.logger.info("Waiting 2 seconds after UHD reset...")
+        time.sleep(2)
+
         # Command to start 5G gNB with specified configuration files
         gnb_command = (
             "cd ~/srsRAN_Project/build/ && "

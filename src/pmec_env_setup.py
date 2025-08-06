@@ -81,6 +81,10 @@ class PMECEnvSetup:
         except Exception as e:
             self.logger.warning(f"Exception during UHD reset: {e}")
 
+        # Wait 2 seconds after UHD reset before starting gNB
+        self.logger.info("Waiting 2 seconds after UHD reset...")
+        time.sleep(2)
+
         gnb_command = (
             "cd ~/srsRAN_Project/build/ && sudo apps/gnb/gnb -c"
             " ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung.yml -c"
