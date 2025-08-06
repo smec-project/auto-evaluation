@@ -83,6 +83,27 @@ class BasicEnvSetup:
         """
         self.logger.info("Starting 5G gNB on edge0...")
 
+        # Reset UHD before starting gNB
+        self.logger.info("Resetting UHD X300 device...")
+        reset_command = (
+            "python3 /usr/lib/uhd/utils/x300_reset.py --addr 192.168.10.2"
+        )
+
+        try:
+            reset_result = self.host_manager.execute_on_host(
+                host_name="edge0", command=reset_command, background=False
+            )
+
+            if reset_result["success"]:
+                self.logger.info("UHD X300 reset completed successfully")
+            else:
+                self.logger.warning(
+                    f"UHD reset failed: {reset_result['error']}"
+                )
+
+        except Exception as e:
+            self.logger.warning(f"Exception during UHD reset: {e}")
+
         # Command to start 5G gNB with specified configuration files
         gnb_command = (
             "cd ~/srsRAN_Project/build/ && "
