@@ -60,31 +60,6 @@ class PMECEnvSetup:
     def start_5g_gnb(self) -> Dict[str, Any]:
         self.logger.info("Starting 5G gNB on edge0 (apps/gnb/gnb)...")
 
-        # Reset UHD before starting gNB
-        self.logger.info("Resetting UHD X300 device...")
-        reset_command = (
-            "python3 /usr/lib/uhd/utils/x300_reset.py --addr 192.168.10.2"
-        )
-
-        try:
-            reset_result = self.host_manager.execute_on_host(
-                host_name="edge0", command=reset_command, background=False
-            )
-
-            if reset_result["success"]:
-                self.logger.info("UHD X300 reset completed successfully")
-            else:
-                self.logger.warning(
-                    f"UHD reset failed: {reset_result['error']}"
-                )
-
-        except Exception as e:
-            self.logger.warning(f"Exception during UHD reset: {e}")
-
-        # Wait 2 seconds after UHD reset before starting gNB
-        self.logger.info("Waiting 2 seconds after UHD reset...")
-        time.sleep(2)
-
         gnb_command = (
             "cd ~/srsRAN_Project/build/ && sudo apps/gnb/gnb -c"
             " ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung.yml -c"
