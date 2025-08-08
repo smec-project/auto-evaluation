@@ -101,9 +101,9 @@ def deploy_environment(
         logger.error("Environment setup failed, stopping deployment")
         return deployment_results
 
-    # Step 2: Wait 15 seconds and run ping tests
-    logger.info("Waiting 15 seconds before running ping tests...")
-    time.sleep(15)
+    # Step 2: Wait 20 seconds and run ping tests
+    logger.info("Waiting 20 seconds before running ping tests...")
+    time.sleep(20)
 
     ping_tester = AmariPingTest(num_ues=num_ues)
     deployment_results["ping_test"] = ping_tester.run_all_ping_tests()
@@ -226,8 +226,8 @@ def deploy_environment(
 
             # Add 2 second delay between client deployments (except for the first one)
             if client_count > 0:
-                logger.info("Waiting 3 seconds before starting next client...")
-                time.sleep(3)
+                logger.info("Waiting 8 seconds before starting next client...")
+                time.sleep(8)
 
             if key == "video_detection_ue_indices":
                 logger.info(
