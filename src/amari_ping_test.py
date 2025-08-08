@@ -184,7 +184,7 @@ class AmariPingTest:
         """
 
         if max_workers is None:
-            max_workers = self.num_ues
+            max_workers = min(self.num_ues, 4)  # 限制最大并发SSH连接数为4
         if not quiet:
             self.logger.info("=" * 60)
             self.logger.info("STARTING AMARI UE PING TESTS")
