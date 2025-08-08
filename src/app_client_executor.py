@@ -221,7 +221,7 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding && python3"
             " run_amarisoft.py"
-            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4"
+            " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
 
@@ -307,7 +307,7 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding-pmec &&"
             " python3 run_amarisoft.py"
-            " ~/video/Inter4K-255-slice16-20M-pingpong-loop8.mp4"
+            " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
 
@@ -395,7 +395,7 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-detection && python3"
             " run_amarisoft.py"
-            " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps.mp4"
+            " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
 
@@ -478,7 +478,7 @@ class AppClientExecutor:
         command = (
             "cd ~/edge-client-prober/edge-apps/video-detection-pmec && python3"
             " run_amarisoft.py"
-            " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps.mp4"
+            " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
 
@@ -561,7 +561,7 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/video-sr && python3"
-            " run_amarisoft.py ~/video/201_320x180_25fps_qp22_loop20.mp4"
+            " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
 
@@ -639,7 +639,7 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/video-sr-pmec && python3"
-            " run_amarisoft.py ~/video/201_320x180_25fps_qp22_loop20.mp4"
+            " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
 
