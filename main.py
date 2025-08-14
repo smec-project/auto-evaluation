@@ -54,34 +54,113 @@ def load_config(config_path: str) -> Dict[str, Any]:
         raise RuntimeError(f"Failed to load config from {config_path}: {e}")
 
 
-def deploy_environment(
-    config: Dict[str, Any], config_path: str, logger: logging.Logger
+def deploy_environment_with_retry(
+    config: Dict[str, Any],
+    config_path: str,
+    logger: logging.Logger,
+    max_retries: int = 3,
 ) -> Dict[str, Any]:
     """
-    Deploy the experimental environment based on configuration.
+    Deploy the experimental environment with retry logic for ping and iperf tests.
 
     Args:
         config: Configuration dictionary
         config_path: Path to configuration file
         logger: Logger instance
+        max_retries: Maximum number of retry attempts
 
     Returns:
         Dictionary containing deployment results
     """
-    logger.info("Starting environment deployment...")
-
-    # Create ConfigLoader instance for calculating server instances
-    experiment_config = ConfigLoader(config_path)
+    logger.info(
+        "Starting environment deployment with retry (max retries:"
+        f" {max_retries})..."
+    )
 
     num_ues = config.get("num_ues", 8)
     pmec_ue_indices = config.get("pmec_ue_indices", "")
 
+    for attempt in range(max_retries + 1):
+        if attempt > 0:
+            logger.info(f"\n=== RETRY ATTEMPT {attempt}/{max_retries} ===")
+        else:
+            logger.info("\n=== INITIAL DEPLOYMENT ATTEMPT ===")
+
+        # Deploy environment and run tests
+        deployment_result = deploy_single_environment_attempt(
+            config, config_path, logger, num_ues, pmec_ue_indices
+        )
+
+        # Check if ping and iperf tests passed
+        ping_passed = deployment_result.get("ping_test", {}).get(
+            "health_report", {}
+        ).get("health_status") in ["EXCELLENT", "GOOD"]
+        iperf_passed = deployment_result.get("iperf_test", {}).get(
+            "success", False
+        )
+
+        if ping_passed and iperf_passed:
+            logger.info(
+                "✓ Both ping and iperf tests passed, proceeding with"
+                " application deployment"
+            )
+            # Continue with application deployment
+            return complete_application_deployment(
+                deployment_result, config, config_path, logger, pmec_ue_indices
+            )
+        else:
+            # Tests failed, cleanup and retry if attempts remaining
+            test_failures = []
+            if not ping_passed:
+                test_failures.append("ping")
+            if not iperf_passed:
+                test_failures.append("iperf")
+
+            logger.error(f"✗ Tests failed: {', '.join(test_failures)}")
+
+            if attempt < max_retries:
+                logger.info("Cleaning up environment before retry...")
+                cleanup_environment(config, logger)
+                logger.info("Waiting 10 seconds before next attempt...")
+                time.sleep(10)
+            else:
+                logger.error(
+                    f"All {max_retries + 1} deployment attempts failed"
+                )
+                deployment_result["overall_success"] = False
+                return deployment_result
+
+    # This should not be reached
+    return {
+        "overall_success": False,
+        "error": "Deployment failed after all retries",
+    }
+
+
+def deploy_single_environment_attempt(
+    config: Dict[str, Any],
+    config_path: str,
+    logger: logging.Logger,
+    num_ues: int,
+    pmec_ue_indices: str,
+) -> Dict[str, Any]:
+    """
+    Deploy environment and run ping/iperf tests (single attempt).
+
+    Args:
+        config: Configuration dictionary
+        config_path: Path to configuration file
+        logger: Logger instance
+        num_ues: Number of UEs
+        pmec_ue_indices: PMEC UE indices
+
+    Returns:
+        Dictionary containing deployment results up to ping/iperf tests
+    """
     deployment_results = {
         "env_setup": None,
         "ping_test": None,
-        "pmec_controller": None,
-        "server_apps": {},
-        "client_apps": {},
+        "iperf_test": None,
         "overall_success": False,
     }
 
@@ -108,11 +187,59 @@ def deploy_environment(
     ping_tester = AmariPingTest(num_ues=num_ues)
     deployment_results["ping_test"] = ping_tester.run_all_ping_tests()
 
-    if not ping_tester.quick_health_check():
-        logger.error("Ping tests failed, stopping deployment")
+    ping_passed = ping_tester.quick_health_check()
+    if not ping_passed:
+        logger.error("Ping tests failed")
         return deployment_results
 
-    # Step 3: Deploy PMEC controller if pmec_ue_indices is not empty
+    # Step 3: Run iperf test on ue1
+    logger.info("Running iperf test on ue1...")
+    throughput_tester = ThroughputTest()
+    deployment_results["iperf_test"] = throughput_tester.run_throughput_test(
+        ue_namespace="ue1", duration=10, interval=2
+    )
+
+    if not deployment_results["iperf_test"]["success"]:
+        logger.error("Iperf test failed")
+        return deployment_results
+
+    logger.info("✓ Both ping and iperf tests passed")
+    return deployment_results
+
+
+def complete_application_deployment(
+    deployment_results: Dict[str, Any],
+    config: Dict[str, Any],
+    config_path: str,
+    logger: logging.Logger,
+    pmec_ue_indices: str,
+) -> Dict[str, Any]:
+    """
+    Complete the application deployment after successful ping/iperf tests.
+
+    Args:
+        deployment_results: Results from environment setup and tests
+        config: Configuration dictionary
+        config_path: Path to configuration file
+        logger: Logger instance
+        pmec_ue_indices: PMEC UE indices
+
+    Returns:
+        Dictionary containing complete deployment results
+    """
+    # Create ConfigLoader instance for calculating server instances
+    experiment_config = ConfigLoader(config_path)
+
+    # Add missing keys to deployment_results
+    deployment_results.update(
+        {
+            "pmec_controller": None,
+            "server_apps": {},
+            "client_apps": {},
+        }
+    )
+
+    # Step 4: Deploy PMEC controller if pmec_ue_indices is not empty
     if pmec_ue_indices != "":
         logger.info("Deploying PMEC controller...")
         pmec_controller = PMECController()
@@ -127,7 +254,7 @@ def deploy_environment(
         logger.info("Waiting 10 seconds for PMEC controller to stabilize...")
         time.sleep(10)
 
-    # Step 4: Deploy server applications based on config order
+    # Step 5: Deploy server applications based on config order
     logger.info("Deploying server applications...")
     server_executor = AppServerExecutor()
 
@@ -214,7 +341,7 @@ def deploy_environment(
         logger.info("Waiting 15 seconds for server applications to start...")
         time.sleep(15)
 
-    # Step 5: Deploy client applications based on config order
+    # Step 6: Deploy client applications based on config order
     logger.info("Deploying client applications...")
     client_executor = AppClientExecutor()
 
@@ -314,6 +441,9 @@ def deploy_environment(
         deployment_results["env_setup"]["overall_success"]
         and deployment_results["ping_test"]["health_report"]["health_status"]
         in ["EXCELLENT", "GOOD"]
+        and deployment_results.get("iperf_test", {}).get(
+            "success", True
+        )  # Include iperf test result
         and (
             deployment_results["pmec_controller"] is None
             or deployment_results["pmec_controller"]["overall_success"]
@@ -328,6 +458,24 @@ def deploy_environment(
         logger.error("Environment deployment completed with errors")
 
     return deployment_results
+
+
+def deploy_environment(
+    config: Dict[str, Any], config_path: str, logger: logging.Logger
+) -> Dict[str, Any]:
+    """
+    Deploy the experimental environment with retry logic for ping and iperf tests.
+    This is a wrapper function that calls deploy_environment_with_retry.
+
+    Args:
+        config: Configuration dictionary
+        config_path: Path to configuration file
+        logger: Logger instance
+
+    Returns:
+        Dictionary containing deployment results
+    """
+    return deploy_environment_with_retry(config, config_path, logger)
 
 
 def cleanup_environment(
