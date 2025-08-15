@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-PMEC Environment Setup Script
+SMEC Environment Setup Script
 
 - Restarts LTE service on amari host
 - Starts 5G gNB on edge0 host (apps/gnb/gnb)
-- Starts pmec_controller on edge0 host (python3 main.py --log in conda pmec env)
+- Starts smec_controller on edge0 host (python3 main.py --log in conda smec env)
 """
 
 import logging
@@ -13,8 +13,8 @@ from typing import Dict, Any
 from .host_manager import HostManager
 
 
-class PMECEnvSetup:
-    """PMEC environment setup for LTE, 5G, and PMEC controller testing."""
+class SMECEnvSetup:
+    """SMEC environment setup for LTE, 5G, and SMEC controller testing."""
 
     def __init__(self, config_file: str = "hosts_config.yaml"):
         self.host_manager = HostManager(config_file)
@@ -67,7 +67,7 @@ class PMECEnvSetup:
         )
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge0", command=gnb_command, session_name="pmec_gnb"
+                host_name="edge0", command=gnb_command, session_name="smec_gnb"
             )
             if result["success"]:
                 self.logger.info("5G gNB started successfully (apps/gnb/gnb)")
@@ -85,28 +85,28 @@ class PMECEnvSetup:
                 "connection_info": "edge0",
             }
 
-    def start_pmec_controller(self) -> Dict[str, Any]:
+    def start_smec_controller(self) -> Dict[str, Any]:
         self.logger.info(
-            "Starting PMEC controller on edge0 (conda env pmec)..."
+            "Starting SMEC controller on edge0 (conda env smec)..."
         )
 
         # Use full path to conda
-        # pmec_command = (
-        #     "cd ~/srsRAN_Project/pmec_controller && "
-        #     "~/miniconda3/bin/conda run -n pmec python3 main.py --log"
+        # smec_command = (
+        #     "cd ~/srsRAN_Project/smec_controller && "
+        #     "~/miniconda3/bin/conda run -n smec python3 main.py --log"
         # )
-        pmec_command = (
-            "cd ~/srsRAN_Project/pmec_controller && python3 main.py --log"
+        smec_command = (
+            "cd ~/srsRAN_Project/smec_controller && python3 main.py --log"
         )
 
         try:
             result = self.host_manager.execute_on_host(
                 host_name="edge0",
-                command=pmec_command,
-                session_name="pmec_controller",
+                command=smec_command,
+                session_name="smec_controller",
             )
             if result["success"]:
-                self.logger.info("PMEC controller started successfully")
+                self.logger.info("SMEC controller started successfully")
                 self.logger.info(
                     f"Session name: {result.get('session_name', 'N/A')}"
                 )
@@ -114,11 +114,11 @@ class PMECEnvSetup:
                     self.logger.info(f"Process PID: {result['pid']}")
             else:
                 self.logger.error(
-                    f"Failed to start PMEC controller: {result['error']}"
+                    f"Failed to start SMEC controller: {result['error']}"
                 )
             return result
         except Exception as e:
-            self.logger.error(f"Exception during PMEC controller startup: {e}")
+            self.logger.error(f"Exception during SMEC controller startup: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -128,11 +128,11 @@ class PMECEnvSetup:
             }
 
     def setup_complete_environment(self, wait_time: int = 10) -> Dict[str, Any]:
-        self.logger.info("Starting complete PMEC environment setup...")
+        self.logger.info("Starting complete SMEC environment setup...")
         results = {
             "lte_restart": None,
             "5g_gnb_start": None,
-            "pmec_controller_start": None,
+            "smec_controller_start": None,
             "overall_success": False,
         }
         # Step 1: Restart LTE service
@@ -153,50 +153,50 @@ class PMECEnvSetup:
             return results
         self.logger.info(f"Waiting 5 seconds for 5G gNB to initialize...")
         time.sleep(5)
-        # Step 3: Start PMEC controller
+        # Step 3: Start SMEC controller
         self.logger.info(
-            "Step 3: Starting PMEC controller on edge0 (conda env pmec)"
+            "Step 3: Starting SMEC controller on edge0 (conda env smec)"
         )
-        results["pmec_controller_start"] = self.start_pmec_controller()
-        if not results["pmec_controller_start"]["success"]:
-            self.logger.error("PMEC controller startup failed")
+        results["smec_controller_start"] = self.start_smec_controller()
+        if not results["smec_controller_start"]["success"]:
+            self.logger.error("SMEC controller startup failed")
             return results
         results["overall_success"] = (
             results["lte_restart"]["success"]
             and results["5g_gnb_start"]["success"]
-            and results["pmec_controller_start"]["success"]
+            and results["smec_controller_start"]["success"]
         )
         if results["overall_success"]:
-            self.logger.info("Complete PMEC environment setup successful!")
+            self.logger.info("Complete SMEC environment setup successful!")
         else:
-            self.logger.error("PMEC environment setup completed with errors")
+            self.logger.error("SMEC environment setup completed with errors")
         return results
 
     def cleanup_environment(self) -> Dict[str, Any]:
-        self.logger.info("Starting PMEC environment cleanup...")
+        self.logger.info("Starting SMEC environment cleanup...")
         results = {
             "lte_stop": None,
             "5g_gnb_stop": None,
-            "pmec_controller_stop": None,
+            "smec_controller_stop": None,
             "overall_success": False,
         }
-        # Stop PMEC controller
-        self.logger.info("Stopping PMEC controller on edge0...")
+        # Stop SMEC controller
+        self.logger.info("Stopping SMEC controller on edge0...")
         try:
             stop_cmd = (
-                "tmux kill-session -t pmec_controller 2>/dev/null || true; "
+                "tmux kill-session -t smec_controller 2>/dev/null || true; "
                 "sudo pkill -f 'main.py' 2>/dev/null || true"
             )
-            results["pmec_controller_stop"] = self.host_manager.execute_on_host(
+            results["smec_controller_stop"] = self.host_manager.execute_on_host(
                 host_name="edge0", command=stop_cmd, background=False
             )
-            results["pmec_controller_stop"]["success"] = True
+            results["smec_controller_stop"]["success"] = True
             self.logger.info(
-                "PMEC controller cleanup completed (tmux session killed)"
+                "SMEC controller cleanup completed (tmux session killed)"
             )
         except Exception as e:
-            self.logger.error(f"Exception during PMEC controller cleanup: {e}")
-            results["pmec_controller_stop"] = {
+            self.logger.error(f"Exception during SMEC controller cleanup: {e}")
+            results["smec_controller_stop"] = {
                 "success": False,
                 "error": str(e),
             }
@@ -204,7 +204,7 @@ class PMECEnvSetup:
         self.logger.info("Stopping 5G gNB on edge0...")
         try:
             stop_cmd = (
-                "tmux kill-session -t pmec_gnb 2>/dev/null || true; "
+                "tmux kill-session -t smec_gnb 2>/dev/null || true; "
                 "sudo pkill -f 'gnb' 2>/dev/null || true"
             )
             results["5g_gnb_stop"] = self.host_manager.execute_on_host(
@@ -229,14 +229,14 @@ class PMECEnvSetup:
             self.logger.error(f"Exception during LTE service cleanup: {e}")
             results["lte_stop"] = {"success": False, "error": str(e)}
         results["overall_success"] = (
-            results["pmec_controller_stop"]["success"]
+            results["smec_controller_stop"]["success"]
             and results["5g_gnb_stop"]["success"]
             and results["lte_stop"]["success"]
         )
         if results["overall_success"]:
-            self.logger.info("PMEC environment cleanup completed successfully!")
+            self.logger.info("SMEC environment cleanup completed successfully!")
         else:
             self.logger.warning(
-                "PMEC environment cleanup completed with some errors"
+                "SMEC environment cleanup completed with some errors"
             )
         return results

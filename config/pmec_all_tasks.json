@@ -1,8 +1,0 @@
-{
-    "num_ues": 11,
-    "pmec_ue_indices": "1,2,3,4,5,6,7,8,9,10,11",
-    "transcoding_ue_indices": "1,2",
-    "video_detection_ue_indices": "3,4",
-    "video_sr_ue_indices": "5",
-    "file_transfer_ue_indices": "6,7,8,9,10,11"
-}

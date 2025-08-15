@@ -4,11 +4,11 @@ App Server Executor
 
 This module manages various application servers on edge1 host:
 - File Transfer Server
-- File Transfer PMEC Server
+- File Transfer SMEC Server
 - Video Transcoding Server
-- Video Transcoding PMEC Server
+- Video Transcoding SMEC Server
 - Video SR Server
-- Video SR PMEC Server
+- Video SR SMEC Server
 """
 
 import logging
@@ -108,18 +108,18 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
-    # File Transfer PMEC Server Functions
-    def start_file_transfer_pmec_server(self) -> Dict[str, Any]:
+    # File Transfer SMEC Server Functions
+    def start_file_transfer_smec_server(self) -> Dict[str, Any]:
         """
-        Start file transfer PMEC server on edge1.
+        Start file transfer SMEC server on edge1.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting file transfer PMEC server on edge1...")
+        self.logger.info("Starting file transfer SMEC server on edge1...")
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/file-transfer-pmec && "
+            "cd ~/edge-server-scheduler/edge-apps/file-transfer-smec && "
             "python main.py"
         )
 
@@ -127,19 +127,19 @@ class AppServerExecutor:
             result = self.host_manager.execute_on_host(
                 host_name="edge1",
                 command=command,
-                session_name="file_server_pmec",
+                session_name="file_server_smec",
             )
 
             if result["success"]:
                 self.logger.info(
-                    "File transfer PMEC server started successfully"
+                    "File transfer SMEC server started successfully"
                 )
                 self.logger.info(
                     f"Session name: {result.get('session_name', 'N/A')}"
                 )
             else:
                 self.logger.error(
-                    "Failed to start file transfer PMEC server:"
+                    "Failed to start file transfer SMEC server:"
                     f" {result['error']}"
                 )
 
@@ -147,7 +147,7 @@ class AppServerExecutor:
 
         except Exception as e:
             self.logger.error(
-                f"Exception during file transfer PMEC server startup: {e}"
+                f"Exception during file transfer SMEC server startup: {e}"
             )
             return {
                 "success": False,
@@ -157,30 +157,30 @@ class AppServerExecutor:
                 "connection_info": "edge1",
             }
 
-    def stop_file_transfer_pmec_server(self) -> Dict[str, Any]:
+    def stop_file_transfer_smec_server(self) -> Dict[str, Any]:
         """
-        Stop file transfer PMEC server on edge1.
+        Stop file transfer SMEC server on edge1.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping file transfer PMEC server on edge1...")
+        self.logger.info("Stopping file transfer SMEC server on edge1...")
 
         try:
             stop_cmd = (
-                "tmux kill-session -t file_server_pmec 2>/dev/null || true; "
+                "tmux kill-session -t file_server_smec 2>/dev/null || true; "
                 "sudo pkill -f 'main.py' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
                 host_name="edge1", command=stop_cmd, background=False
             )
             result["success"] = True
-            self.logger.info("File transfer PMEC server stopped successfully")
+            self.logger.info("File transfer SMEC server stopped successfully")
             return result
 
         except Exception as e:
             self.logger.error(
-                f"Exception during file transfer PMEC server cleanup: {e}"
+                f"Exception during file transfer SMEC server cleanup: {e}"
             )
             return {"success": False, "error": str(e)}
 
@@ -268,12 +268,12 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
-    # Video Transcoding PMEC Server Functions
-    def start_video_transcoding_pmec_server(
+    # Video Transcoding SMEC Server Functions
+    def start_video_transcoding_smec_server(
         self, instance_count: int = 2
     ) -> Dict[str, Any]:
         """
-        Start video transcoding PMEC server on edge1.
+        Start video transcoding SMEC server on edge1.
 
         Args:
             instance_count: Number of server instances to start
@@ -282,12 +282,12 @@ class AppServerExecutor:
             Dictionary containing execution results
         """
         self.logger.info(
-            "Starting video transcoding PMEC server on edge1 with"
+            "Starting video transcoding SMEC server on edge1 with"
             f" {instance_count} instances..."
         )
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-pmec && "
+            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-smec && "
             f"python3 run.py {instance_count} && tail -f /dev/null"
         )
 
@@ -295,19 +295,19 @@ class AppServerExecutor:
             result = self.host_manager.execute_on_host(
                 host_name="edge1",
                 command=command,
-                session_name="video_transcoding_pmec",
+                session_name="video_transcoding_smec",
             )
 
             if result["success"]:
                 self.logger.info(
-                    "Video transcoding PMEC server started successfully"
+                    "Video transcoding SMEC server started successfully"
                 )
                 self.logger.info(
                     f"Session name: {result.get('session_name', 'N/A')}"
                 )
             else:
                 self.logger.error(
-                    "Failed to start video transcoding PMEC server:"
+                    "Failed to start video transcoding SMEC server:"
                     f" {result['error']}"
                 )
 
@@ -315,7 +315,7 @@ class AppServerExecutor:
 
         except Exception as e:
             self.logger.error(
-                f"Exception during video transcoding PMEC server startup: {e}"
+                f"Exception during video transcoding SMEC server startup: {e}"
             )
             return {
                 "success": False,
@@ -325,18 +325,18 @@ class AppServerExecutor:
                 "connection_info": "edge1",
             }
 
-    def stop_video_transcoding_pmec_server(self) -> Dict[str, Any]:
+    def stop_video_transcoding_smec_server(self) -> Dict[str, Any]:
         """
-        Stop video transcoding PMEC server on edge1.
+        Stop video transcoding SMEC server on edge1.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video transcoding PMEC server on edge1...")
+        self.logger.info("Stopping video transcoding SMEC server on edge1...")
 
         try:
             stop_cmd = (
-                "tmux kill-session -t video_transcoding_pmec 2>/dev/null ||"
+                "tmux kill-session -t video_transcoding_smec 2>/dev/null ||"
                 " true; sudo pkill -f 'transcoder' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
@@ -344,13 +344,13 @@ class AppServerExecutor:
             )
             result["success"] = True
             self.logger.info(
-                "Video transcoding PMEC server stopped successfully"
+                "Video transcoding SMEC server stopped successfully"
             )
             return result
 
         except Exception as e:
             self.logger.error(
-                f"Exception during video transcoding PMEC server cleanup: {e}"
+                f"Exception during video transcoding SMEC server cleanup: {e}"
             )
             return {"success": False, "error": str(e)}
 
@@ -436,12 +436,12 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
-    # Video Detection PMEC Server Functions
-    def start_video_detection_pmec_server(
+    # Video Detection SMEC Server Functions
+    def start_video_detection_smec_server(
         self, instance_count: int = 2
     ) -> Dict[str, Any]:
         """
-        Start video detection PMEC server on edge1.
+        Start video detection SMEC server on edge1.
 
         Args:
             instance_count: Number of server instances to start
@@ -450,12 +450,12 @@ class AppServerExecutor:
             Dictionary containing execution results
         """
         self.logger.info(
-            "Starting video detection PMEC server on edge1 with"
+            "Starting video detection SMEC server on edge1 with"
             f" {instance_count} instances..."
         )
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-detection-pmec && "
+            "cd ~/edge-server-scheduler/edge-apps/video-detection-smec && "
             f"python3 run.py {instance_count} && tail -f /dev/null"
         )
 
@@ -463,19 +463,19 @@ class AppServerExecutor:
             result = self.host_manager.execute_on_host(
                 host_name="edge1",
                 command=command,
-                session_name="video_detection_pmec",
+                session_name="video_detection_smec",
             )
 
             if result["success"]:
                 self.logger.info(
-                    "Video detection PMEC server started successfully"
+                    "Video detection SMEC server started successfully"
                 )
                 self.logger.info(
                     f"Session name: {result.get('session_name', 'N/A')}"
                 )
             else:
                 self.logger.error(
-                    "Failed to start video detection PMEC server:"
+                    "Failed to start video detection SMEC server:"
                     f" {result['error']}"
                 )
 
@@ -483,7 +483,7 @@ class AppServerExecutor:
 
         except Exception as e:
             self.logger.error(
-                f"Exception during video detection PMEC server startup: {e}"
+                f"Exception during video detection SMEC server startup: {e}"
             )
             return {
                 "success": False,
@@ -493,18 +493,18 @@ class AppServerExecutor:
                 "connection_info": "edge1",
             }
 
-    def stop_video_detection_pmec_server(self) -> Dict[str, Any]:
+    def stop_video_detection_smec_server(self) -> Dict[str, Any]:
         """
-        Stop video detection PMEC server on edge1.
+        Stop video detection SMEC server on edge1.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video detection PMEC server on edge1...")
+        self.logger.info("Stopping video detection SMEC server on edge1...")
 
         try:
             stop_cmd = (
-                "tmux kill-session -t video_detection_pmec 2>/dev/null || true;"
+                "tmux kill-session -t video_detection_smec 2>/dev/null || true;"
                 " sudo pkill -f 'video_detector' 2>/dev/null || true; sudo"
                 " pkill -f 'yolo_detection.py' 2>/dev/null || true"
             )
@@ -512,12 +512,12 @@ class AppServerExecutor:
                 host_name="edge1", command=stop_cmd, background=False
             )
             result["success"] = True
-            self.logger.info("Video detection PMEC server stopped successfully")
+            self.logger.info("Video detection SMEC server stopped successfully")
             return result
 
         except Exception as e:
             self.logger.error(
-                f"Exception during video detection PMEC server cleanup: {e}"
+                f"Exception during video detection SMEC server cleanup: {e}"
             )
             return {"success": False, "error": str(e)}
 
@@ -596,12 +596,12 @@ class AppServerExecutor:
             self.logger.error(f"Exception during video SR server cleanup: {e}")
             return {"success": False, "error": str(e)}
 
-    # Video SR PMEC Server Functions
-    def start_video_sr_pmec_server(
+    # Video SR SMEC Server Functions
+    def start_video_sr_smec_server(
         self, instance_count: int = 2
     ) -> Dict[str, Any]:
         """
-        Start video SR PMEC server on edge1.
+        Start video SR SMEC server on edge1.
 
         Args:
             instance_count: Number of server instances to start
@@ -610,12 +610,12 @@ class AppServerExecutor:
             Dictionary containing execution results
         """
         self.logger.info(
-            "Starting video SR PMEC server on edge1 with"
+            "Starting video SR SMEC server on edge1 with"
             f" {instance_count} instances..."
         )
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-sr-pmec && "
+            "cd ~/edge-server-scheduler/edge-apps/video-sr-smec && "
             f"python3 run.py {instance_count} && tail -f /dev/null"
         )
 
@@ -623,24 +623,24 @@ class AppServerExecutor:
             result = self.host_manager.execute_on_host(
                 host_name="edge1",
                 command=command,
-                session_name="video_sr_pmec",
+                session_name="video_sr_smec",
             )
 
             if result["success"]:
-                self.logger.info("Video SR PMEC server started successfully")
+                self.logger.info("Video SR SMEC server started successfully")
                 self.logger.info(
                     f"Session name: {result.get('session_name', 'N/A')}"
                 )
             else:
                 self.logger.error(
-                    f"Failed to start video SR PMEC server: {result['error']}"
+                    f"Failed to start video SR SMEC server: {result['error']}"
                 )
 
             return result
 
         except Exception as e:
             self.logger.error(
-                f"Exception during video SR PMEC server startup: {e}"
+                f"Exception during video SR SMEC server startup: {e}"
             )
             return {
                 "success": False,
@@ -650,30 +650,30 @@ class AppServerExecutor:
                 "connection_info": "edge1",
             }
 
-    def stop_video_sr_pmec_server(self) -> Dict[str, Any]:
+    def stop_video_sr_smec_server(self) -> Dict[str, Any]:
         """
-        Stop video SR PMEC server on edge1.
+        Stop video SR SMEC server on edge1.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video SR PMEC server on edge1...")
+        self.logger.info("Stopping video SR SMEC server on edge1...")
 
         try:
             stop_cmd = (
-                "tmux kill-session -t video_sr_pmec 2>/dev/null || true; "
+                "tmux kill-session -t video_sr_smec 2>/dev/null || true; "
                 "sudo pkill -f 'video_sr_server' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
                 host_name="edge1", command=stop_cmd, background=False
             )
             result["success"] = True
-            self.logger.info("Video SR PMEC server stopped successfully")
+            self.logger.info("Video SR SMEC server stopped successfully")
             return result
 
         except Exception as e:
             self.logger.error(
-                f"Exception during video SR PMEC server cleanup: {e}"
+                f"Exception during video SR SMEC server cleanup: {e}"
             )
             return {"success": False, "error": str(e)}
 
@@ -682,9 +682,9 @@ class AppServerExecutor:
         self,
         video_transcoding_instance_count: int = 2,
         video_detection_instance_count: int = 2,
-        video_detection_pmec_instance_count: int = 2,
+        video_detection_smec_instance_count: int = 2,
         video_sr_instance_count: int = 2,
-        video_sr_pmec_instance_count: int = 2,
+        video_sr_smec_instance_count: int = 2,
     ) -> Dict[str, Any]:
         """
         Start all application servers.
@@ -692,9 +692,9 @@ class AppServerExecutor:
         Args:
             video_transcoding_instance_count: Number of instances for video transcoding servers
             video_detection_instance_count: Number of instances for video detection server
-            video_detection_pmec_instance_count: Number of instances for video detection PMEC server
+            video_detection_smec_instance_count: Number of instances for video detection SMEC server
             video_sr_instance_count: Number of instances for video SR server
-            video_sr_pmec_instance_count: Number of instances for video SR PMEC server
+            video_sr_smec_instance_count: Number of instances for video SR SMEC server
 
         Returns:
             Dictionary containing results for all servers
@@ -703,22 +703,22 @@ class AppServerExecutor:
 
         results = {
             "file_server": self.start_file_transfer_server(),
-            "file_server_pmec": self.start_file_transfer_pmec_server(),
+            "file_server_smec": self.start_file_transfer_smec_server(),
             "video_transcoding": self.start_video_transcoding_server(
                 video_transcoding_instance_count
             ),
-            "video_transcoding_pmec": self.start_video_transcoding_pmec_server(
+            "video_transcoding_smec": self.start_video_transcoding_smec_server(
                 video_transcoding_instance_count
             ),
             "video_detection": self.start_video_detection_server(
                 video_detection_instance_count
             ),
-            "video_detection_pmec": self.start_video_detection_pmec_server(
-                video_detection_pmec_instance_count
+            "video_detection_smec": self.start_video_detection_smec_server(
+                video_detection_smec_instance_count
             ),
             "video_sr": self.start_video_sr_server(video_sr_instance_count),
-            "video_sr_pmec": self.start_video_sr_pmec_server(
-                video_sr_pmec_instance_count
+            "video_sr_smec": self.start_video_sr_smec_server(
+                video_sr_smec_instance_count
             ),
         }
 
@@ -744,13 +744,13 @@ class AppServerExecutor:
 
         results = {
             "file_server": self.stop_file_transfer_server(),
-            "file_server_pmec": self.stop_file_transfer_pmec_server(),
+            "file_server_smec": self.stop_file_transfer_smec_server(),
             "video_transcoding": self.stop_video_transcoding_server(),
-            "video_transcoding_pmec": self.stop_video_transcoding_pmec_server(),
+            "video_transcoding_smec": self.stop_video_transcoding_smec_server(),
             "video_detection": self.stop_video_detection_server(),
-            "video_detection_pmec": self.stop_video_detection_pmec_server(),
+            "video_detection_smec": self.stop_video_detection_smec_server(),
             "video_sr": self.stop_video_sr_server(),
-            "video_sr_pmec": self.stop_video_sr_pmec_server(),
+            "video_sr_smec": self.stop_video_sr_smec_server(),
         }
 
         # Check overall success
@@ -785,30 +785,30 @@ class AppServerExecutor:
 
             status = {
                 "file_server": False,
-                "file_server_pmec": False,
+                "file_server_smec": False,
                 "video_transcoding": False,
-                "video_transcoding_pmec": False,
+                "video_transcoding_smec": False,
                 "video_detection": False,
-                "video_detection_pmec": False,
+                "video_detection_smec": False,
                 "video_sr": False,
-                "video_sr_pmec": False,
+                "video_sr_smec": False,
                 "tmux_output": result.get("output", ""),
             }
 
             if result["success"] and result.get("output"):
                 output = result["output"]
                 status["file_server"] = "file_server:" in output
-                status["file_server_pmec"] = "file_server_pmec:" in output
+                status["file_server_smec"] = "file_server_smec:" in output
                 status["video_transcoding"] = "video_transcoding:" in output
-                status["video_transcoding_pmec"] = (
-                    "video_transcoding_pmec:" in output
+                status["video_transcoding_smec"] = (
+                    "video_transcoding_smec:" in output
                 )
                 status["video_detection"] = "video_detection:" in output
-                status["video_detection_pmec"] = (
-                    "video_detection_pmec:" in output
+                status["video_detection_smec"] = (
+                    "video_detection_smec:" in output
                 )
                 status["video_sr"] = "video_sr:" in output
-                status["video_sr_pmec"] = "video_sr_pmec:" in output
+                status["video_sr_smec"] = "video_sr_smec:" in output
 
             return status
 
@@ -816,12 +816,12 @@ class AppServerExecutor:
             self.logger.error(f"Exception during status check: {e}")
             return {
                 "file_server": False,
-                "file_server_pmec": False,
+                "file_server_smec": False,
                 "video_transcoding": False,
-                "video_transcoding_pmec": False,
+                "video_transcoding_smec": False,
                 "video_detection": False,
-                "video_detection_pmec": False,
+                "video_detection_smec": False,
                 "video_sr": False,
-                "video_sr_pmec": False,
+                "video_sr_smec": False,
                 "error": str(e),
             }

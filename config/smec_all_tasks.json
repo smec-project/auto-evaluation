@@ -1,7 +1,8 @@
 {
-    "num_ues": 4,
-    "smec_ue_indices": "",
+    "num_ues": 5,
+    "smec_ue_indices": "1,2,3,4,5",
     "transcoding_ue_indices": "1,2",
     "video_detection_ue_indices": "3,4",
+    "video_sr_ue_indices": "5",
     "file_transfer_ue_indices": ""
 }

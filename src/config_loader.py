@@ -91,14 +91,14 @@ class ConfigLoader:
         """
         return self.config_data.get("video_detection_ue_indices", "")
 
-    def get_pmec_ue_indices(self) -> str:
+    def get_smec_ue_indices(self) -> str:
         """
-        Get UE indices for PMEC controller.
+        Get UE indices for SMEC controller.
 
         Returns:
             Comma-separated UE indices string
         """
-        return self.config_data.get("pmec_ue_indices", "")
+        return self.config_data.get("smec_ue_indices", "")
 
     def get_video_sr_ue_indices(self) -> str:
         """
@@ -196,14 +196,14 @@ class ConfigLoader:
         file_transfer_ues = self.get_file_transfer_ue_indices()
         video_detection_ues = self.get_video_detection_ue_indices()
         video_sr_ues = self.get_video_sr_ue_indices()
-        pmec_ues = self.get_pmec_ue_indices()
+        smec_ues = self.get_smec_ue_indices()
 
         return {
             "transcoding_ue_indices": transcoding_ues,
             "file_transfer_ue_indices": file_transfer_ues,
             "video_detection_ue_indices": video_detection_ues,
             "video_sr_ue_indices": video_sr_ues,
-            "pmec_ue_indices": pmec_ues,
+            "smec_ue_indices": smec_ues,
             "transcoding_server_instances": self.calculate_server_instances(
                 transcoding_ues
             ),
@@ -238,7 +238,7 @@ class ConfigLoader:
             f"File transfer UE indices: {config['file_transfer_ue_indices']}"
         )
         self.logger.info(
-            f"PMEC controller UE indices: {config['pmec_ue_indices']}"
+            f"SMEC controller UE indices: {config['smec_ue_indices']}"
         )
         self.logger.info(
             "Video transcoding server instances:"

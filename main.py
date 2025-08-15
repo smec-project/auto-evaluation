@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Main Entry Point for PMEC Experiment Automation
+Main Entry Point for SMEC Experiment Automation
 
-This script handles the deployment, cleanup, and testing of PMEC experimental environments.
+This script handles the deployment, cleanup, and testing of SMEC experimental environments.
 It supports three operations:
-- Operation 0: Deploy environment (basic or PMEC based on configuration)
+- Operation 0: Deploy environment (basic or SMEC based on configuration)
 - Operation 1: Cleanup all deployed services
 - Operation 2: Run throughput test
 
@@ -22,9 +22,9 @@ import time
 from typing import Dict, Any, List
 
 from src.basic_env_setup import BasicEnvSetup
-from src.pmec_env_setup import PMECEnvSetup
+from src.smec_env_setup import SMECEnvSetup
 from src.amari_ping_test import AmariPingTest
-from src.pmec_controller import PMECController
+from src.smec_controller import SMECController
 from src.app_server_executor import AppServerExecutor
 from src.app_client_executor import AppClientExecutor
 from src.throughput_test import ThroughputTest
@@ -78,7 +78,7 @@ def deploy_environment_with_retry(
     )
 
     num_ues = config.get("num_ues", 8)
-    pmec_ue_indices = config.get("pmec_ue_indices", "")
+    smec_ue_indices = config.get("smec_ue_indices", "")
 
     for attempt in range(max_retries + 1):
         if attempt > 0:
@@ -88,7 +88,7 @@ def deploy_environment_with_retry(
 
         # Deploy environment and run tests
         deployment_result = deploy_single_environment_attempt(
-            config, config_path, logger, num_ues, pmec_ue_indices
+            config, config_path, logger, num_ues, smec_ue_indices
         )
 
         # Check if ping and iperf tests passed
@@ -106,7 +106,7 @@ def deploy_environment_with_retry(
             )
             # Continue with application deployment
             return complete_application_deployment(
-                deployment_result, config, config_path, logger, pmec_ue_indices
+                deployment_result, config, config_path, logger, smec_ue_indices
             )
         else:
             # Tests failed, cleanup and retry if attempts remaining
@@ -142,7 +142,7 @@ def deploy_single_environment_attempt(
     config_path: str,
     logger: logging.Logger,
     num_ues: int,
-    pmec_ue_indices: str,
+    smec_ue_indices: str,
 ) -> Dict[str, Any]:
     """
     Deploy environment and run ping/iperf tests (single attempt).
@@ -152,7 +152,7 @@ def deploy_single_environment_attempt(
         config_path: Path to configuration file
         logger: Logger instance
         num_ues: Number of UEs
-        pmec_ue_indices: PMEC UE indices
+        smec_ue_indices: SMEC UE indices
 
     Returns:
         Dictionary containing deployment results up to ping/iperf tests
@@ -164,16 +164,16 @@ def deploy_single_environment_attempt(
         "overall_success": False,
     }
 
-    # Step 1: Deploy basic or PMEC environment based on pmec_ue_indices
-    if pmec_ue_indices == "":
-        logger.info("Deploying basic environment (pmec_ue_indices is empty)")
+    # Step 1: Deploy basic or SMEC environment based on smec_ue_indices
+    if smec_ue_indices == "":
+        logger.info("Deploying basic environment (smec_ue_indices is empty)")
         env_setup = BasicEnvSetup()
         deployment_results["env_setup"] = env_setup.setup_complete_environment()
     else:
         logger.info(
-            f"Deploying PMEC environment (pmec_ue_indices: {pmec_ue_indices})"
+            f"Deploying SMEC environment (smec_ue_indices: {smec_ue_indices})"
         )
-        env_setup = PMECEnvSetup()
+        env_setup = SMECEnvSetup()
         deployment_results["env_setup"] = env_setup.setup_complete_environment()
 
     if not deployment_results["env_setup"]["overall_success"]:
@@ -212,7 +212,7 @@ def complete_application_deployment(
     config: Dict[str, Any],
     config_path: str,
     logger: logging.Logger,
-    pmec_ue_indices: str,
+    smec_ue_indices: str,
 ) -> Dict[str, Any]:
     """
     Complete the application deployment after successful ping/iperf tests.
@@ -222,7 +222,7 @@ def complete_application_deployment(
         config: Configuration dictionary
         config_path: Path to configuration file
         logger: Logger instance
-        pmec_ue_indices: PMEC UE indices
+        smec_ue_indices: SMEC UE indices
 
     Returns:
         Dictionary containing complete deployment results
@@ -233,25 +233,25 @@ def complete_application_deployment(
     # Add missing keys to deployment_results
     deployment_results.update(
         {
-            "pmec_controller": None,
+            "smec_controller": None,
             "server_apps": {},
             "client_apps": {},
         }
     )
 
-    # Step 4: Deploy PMEC controller if pmec_ue_indices is not empty
-    if pmec_ue_indices != "":
-        logger.info("Deploying PMEC controller...")
-        pmec_controller = PMECController()
-        deployment_results["pmec_controller"] = (
-            pmec_controller.start_pmec_system(pmec_ue_indices)
+    # Step 4: Deploy SMEC controller if smec_ue_indices is not empty
+    if smec_ue_indices != "":
+        logger.info("Deploying SMEC controller...")
+        smec_controller = SMECController()
+        deployment_results["smec_controller"] = (
+            smec_controller.start_smec_system(smec_ue_indices)
         )
 
-        if not deployment_results["pmec_controller"]["overall_success"]:
-            logger.error("PMEC controller deployment failed")
+        if not deployment_results["smec_controller"]["overall_success"]:
+            logger.error("SMEC controller deployment failed")
             return deployment_results
 
-        logger.info("Waiting 10 seconds for PMEC controller to stabilize...")
+        logger.info("Waiting 10 seconds for SMEC controller to stabilize...")
         time.sleep(10)
 
     # Step 5: Deploy server applications based on config order
@@ -272,10 +272,10 @@ def complete_application_deployment(
                 detection_instances = (
                     experiment_config.get_video_detection_server_instances()
                 )
-                if pmec_ue_indices != "":
+                if smec_ue_indices != "":
                     deployment_results["server_apps"][
-                        "video_detection_pmec"
-                    ] = server_executor.start_video_detection_pmec_server(
+                        "video_detection_smec"
+                    ] = server_executor.start_video_detection_smec_server(
                         detection_instances
                     )
                 else:
@@ -291,10 +291,10 @@ def complete_application_deployment(
                 transcoding_instances = (
                     experiment_config.get_transcoding_server_instances()
                 )
-                if pmec_ue_indices != "":
+                if smec_ue_indices != "":
                     deployment_results["server_apps"][
-                        "video_transcoding_pmec"
-                    ] = server_executor.start_video_transcoding_pmec_server(
+                        "video_transcoding_smec"
+                    ] = server_executor.start_video_transcoding_smec_server(
                         transcoding_instances
                     )
                 else:
@@ -310,9 +310,9 @@ def complete_application_deployment(
                 video_sr_instances = (
                     experiment_config.get_video_sr_server_instances()
                 )
-                if pmec_ue_indices != "":
-                    deployment_results["server_apps"]["video_sr_pmec"] = (
-                        server_executor.start_video_sr_pmec_server(
+                if smec_ue_indices != "":
+                    deployment_results["server_apps"]["video_sr_smec"] = (
+                        server_executor.start_video_sr_smec_server(
                             video_sr_instances
                         )
                     )
@@ -326,10 +326,10 @@ def complete_application_deployment(
 
             elif key == "file_transfer_ue_indices":
                 logger.info("Starting file transfer server...")
-                if pmec_ue_indices != "":
+                if smec_ue_indices != "":
                     deployment_results["server_apps"][
-                        "file_transfer_pmec"
-                    ] = server_executor.start_file_transfer_pmec_server()
+                        "file_transfer_smec"
+                    ] = server_executor.start_file_transfer_smec_server()
                 else:
                     deployment_results["server_apps"][
                         "file_transfer"
@@ -361,10 +361,10 @@ def complete_application_deployment(
                     "Starting video detection client with UE indices:"
                     f" {ue_indices}"
                 )
-                if pmec_ue_indices != "":
+                if smec_ue_indices != "":
                     deployment_results["client_apps"][
-                        "video_detection_pmec"
-                    ] = client_executor.start_video_detection_pmec_client(
+                        "video_detection_smec"
+                    ] = client_executor.start_video_detection_smec_client(
                         ue_indices
                     )
                 else:
@@ -378,10 +378,10 @@ def complete_application_deployment(
                     "Starting video transcoding client with UE indices:"
                     f" {ue_indices}"
                 )
-                if pmec_ue_indices != "":
+                if smec_ue_indices != "":
                     deployment_results["client_apps"][
-                        "video_transcoding_pmec"
-                    ] = client_executor.start_video_transcoding_pmec_client(
+                        "video_transcoding_smec"
+                    ] = client_executor.start_video_transcoding_smec_client(
                         ue_indices
                     )
                 else:
@@ -396,9 +396,9 @@ def complete_application_deployment(
                 logger.info(
                     f"Starting video SR client with UE indices: {ue_indices}"
                 )
-                if pmec_ue_indices != "":
-                    deployment_results["client_apps"]["video_sr_pmec"] = (
-                        client_executor.start_video_sr_pmec_client(ue_indices)
+                if smec_ue_indices != "":
+                    deployment_results["client_apps"]["video_sr_smec"] = (
+                        client_executor.start_video_sr_smec_client(ue_indices)
                     )
                 else:
                     deployment_results["client_apps"]["video_sr"] = (
@@ -411,9 +411,9 @@ def complete_application_deployment(
                     "Starting file transfer client with UE indices:"
                     f" {ue_indices}"
                 )
-                if pmec_ue_indices != "":
-                    deployment_results["client_apps"]["file_transfer_pmec"] = (
-                        client_executor.start_file_transfer_pmec_client(
+                if smec_ue_indices != "":
+                    deployment_results["client_apps"]["file_transfer_smec"] = (
+                        client_executor.start_file_transfer_smec_client(
                             ue_indices
                         )
                     )
@@ -445,8 +445,8 @@ def complete_application_deployment(
             "success", True
         )  # Include iperf test result
         and (
-            deployment_results["pmec_controller"] is None
-            or deployment_results["pmec_controller"]["overall_success"]
+            deployment_results["smec_controller"] is None
+            or deployment_results["smec_controller"]["overall_success"]
         )
         and server_success
         and client_success
@@ -493,12 +493,12 @@ def cleanup_environment(
     """
     logger.info("Starting environment cleanup...")
 
-    pmec_ue_indices = config.get("pmec_ue_indices", "")
+    smec_ue_indices = config.get("smec_ue_indices", "")
 
     cleanup_results = {
         "client_apps": {},
         "server_apps": {},
-        "pmec_controller": None,
+        "smec_controller": None,
         "env_cleanup": None,
         "overall_success": False,
     }
@@ -513,16 +513,16 @@ def cleanup_environment(
     server_executor = AppServerExecutor()
     cleanup_results["server_apps"] = server_executor.stop_all_servers()
 
-    # Step 3: Stop PMEC controller if it was deployed
-    if pmec_ue_indices != "":
-        logger.info("Stopping PMEC controller...")
-        pmec_controller = PMECController()
-        cleanup_results["pmec_controller"] = pmec_controller.stop_pmec_system()
+    # Step 3: Stop SMEC controller if it was deployed
+    if smec_ue_indices != "":
+        logger.info("Stopping SMEC controller...")
+        smec_controller = SMECController()
+        cleanup_results["smec_controller"] = smec_controller.stop_smec_system()
 
     # Step 4: Cleanup environment
     logger.info("Cleaning up environment...")
-    if pmec_ue_indices != "":
-        env_setup = PMECEnvSetup()
+    if smec_ue_indices != "":
+        env_setup = SMECEnvSetup()
         cleanup_results["env_cleanup"] = env_setup.cleanup_environment()
     else:
         env_setup = BasicEnvSetup()
@@ -533,8 +533,8 @@ def cleanup_environment(
         cleanup_results["client_apps"]["overall_success"]
         and cleanup_results["server_apps"]["overall_success"]
         and (
-            cleanup_results["pmec_controller"] is None
-            or cleanup_results["pmec_controller"]["overall_success"]
+            cleanup_results["smec_controller"] is None
+            or cleanup_results["smec_controller"]["overall_success"]
         )
         and cleanup_results["env_cleanup"]["overall_success"]
     )
