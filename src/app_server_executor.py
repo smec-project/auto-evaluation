@@ -355,26 +355,18 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Video Detection Server Functions
-    def start_video_detection_server(
-        self, instance_count: int = 2
-    ) -> Dict[str, Any]:
+    def start_video_detection_server(self) -> Dict[str, Any]:
         """
         Start video detection server on edge1.
-
-        Args:
-            instance_count: Number of server instances to start
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info(
-            "Starting video detection server on edge1 with"
-            f" {instance_count} instances..."
-        )
+        self.logger.info("Starting video detection server on edge1...")
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-detection && taskset"
-            f" -c 0-11 python3 run.py {instance_count} && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
+            " taskset -c 0-11 multi_video_detection && tail -f /dev/null"
         )
 
         try:
@@ -437,26 +429,18 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Video Detection SMEC Server Functions
-    def start_video_detection_smec_server(
-        self, instance_count: int = 2
-    ) -> Dict[str, Any]:
+    def start_video_detection_smec_server(self) -> Dict[str, Any]:
         """
         Start video detection SMEC server on edge1.
-
-        Args:
-            instance_count: Number of server instances to start
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info(
-            "Starting video detection SMEC server on edge1 with"
-            f" {instance_count} instances..."
-        )
+        self.logger.info("Starting video detection SMEC server on edge1...")
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-detection-smec && "
-            f"python3 run.py {instance_count} && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec &&"
+            " multi_video_detection && tail -f /dev/null"
         )
 
         try:
@@ -522,24 +506,18 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Video SR Server Functions
-    def start_video_sr_server(self, instance_count: int = 2) -> Dict[str, Any]:
+    def start_video_sr_server(self) -> Dict[str, Any]:
         """
         Start video SR server on edge1.
-
-        Args:
-            instance_count: Number of server instances to start
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info(
-            "Starting video SR server on edge1 with"
-            f" {instance_count} instances..."
-        )
+        self.logger.info("Starting video SR server on edge1...")
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-sr && taskset -c 0-11"
-            f" python3 run.py {instance_count} && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && taskset -c"
+            " 0-11 multi_video_sr && tail -f /dev/null"
         )
 
         try:
@@ -597,26 +575,18 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Video SR SMEC Server Functions
-    def start_video_sr_smec_server(
-        self, instance_count: int = 2
-    ) -> Dict[str, Any]:
+    def start_video_sr_smec_server(self) -> Dict[str, Any]:
         """
         Start video SR SMEC server on edge1.
-
-        Args:
-            instance_count: Number of server instances to start
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info(
-            "Starting video SR SMEC server on edge1 with"
-            f" {instance_count} instances..."
-        )
+        self.logger.info("Starting video SR SMEC server on edge1...")
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-sr-smec && "
-            f"python3 run.py {instance_count} && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && "
+            "multi_video_sr && tail -f /dev/null"
         )
 
         try:
@@ -681,20 +651,12 @@ class AppServerExecutor:
     def start_all_servers(
         self,
         video_transcoding_instance_count: int = 2,
-        video_detection_instance_count: int = 2,
-        video_detection_smec_instance_count: int = 2,
-        video_sr_instance_count: int = 2,
-        video_sr_smec_instance_count: int = 2,
     ) -> Dict[str, Any]:
         """
         Start all application servers.
 
         Args:
             video_transcoding_instance_count: Number of instances for video transcoding servers
-            video_detection_instance_count: Number of instances for video detection server
-            video_detection_smec_instance_count: Number of instances for video detection SMEC server
-            video_sr_instance_count: Number of instances for video SR server
-            video_sr_smec_instance_count: Number of instances for video SR SMEC server
 
         Returns:
             Dictionary containing results for all servers
@@ -710,16 +672,10 @@ class AppServerExecutor:
             "video_transcoding_smec": self.start_video_transcoding_smec_server(
                 video_transcoding_instance_count
             ),
-            "video_detection": self.start_video_detection_server(
-                video_detection_instance_count
-            ),
-            "video_detection_smec": self.start_video_detection_smec_server(
-                video_detection_smec_instance_count
-            ),
-            "video_sr": self.start_video_sr_server(video_sr_instance_count),
-            "video_sr_smec": self.start_video_sr_smec_server(
-                video_sr_smec_instance_count
-            ),
+            "video_detection": self.start_video_detection_server(),
+            "video_detection_smec": self.start_video_detection_smec_server(),
+            "video_sr": self.start_video_sr_server(),
+            "video_sr_smec": self.start_video_sr_smec_server(),
         }
 
         # Check overall success

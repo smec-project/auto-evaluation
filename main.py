@@ -269,21 +269,14 @@ def complete_application_deployment(
 
             if key == "video_detection_ue_indices":
                 logger.info("Starting video detection server...")
-                detection_instances = (
-                    experiment_config.get_video_detection_server_instances()
-                )
                 if smec_ue_indices != "":
                     deployment_results["server_apps"][
                         "video_detection_smec"
-                    ] = server_executor.start_video_detection_smec_server(
-                        detection_instances
-                    )
+                    ] = server_executor.start_video_detection_smec_server()
                 else:
-                    deployment_results["server_apps"]["video_detection"] = (
-                        server_executor.start_video_detection_server(
-                            detection_instances
-                        )
-                    )
+                    deployment_results["server_apps"][
+                        "video_detection"
+                    ] = server_executor.start_video_detection_server()
                 server_count += 1
 
             elif key == "transcoding_ue_indices":
@@ -307,21 +300,14 @@ def complete_application_deployment(
 
             elif key == "video_sr_ue_indices":
                 logger.info("Starting video SR server...")
-                video_sr_instances = (
-                    experiment_config.get_video_sr_server_instances()
-                )
                 if smec_ue_indices != "":
-                    deployment_results["server_apps"]["video_sr_smec"] = (
-                        server_executor.start_video_sr_smec_server(
-                            video_sr_instances
-                        )
-                    )
+                    deployment_results["server_apps"][
+                        "video_sr_smec"
+                    ] = server_executor.start_video_sr_smec_server()
                 else:
-                    deployment_results["server_apps"]["video_sr"] = (
-                        server_executor.start_video_sr_server(
-                            video_sr_instances
-                        )
-                    )
+                    deployment_results["server_apps"][
+                        "video_sr"
+                    ] = server_executor.start_video_sr_server()
                 server_count += 1
 
             elif key == "file_transfer_ue_indices":
