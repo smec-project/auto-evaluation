@@ -366,7 +366,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
-            " taskset -c 0-11 multi_video_detection && tail -f /dev/null"
+            " taskset -c 0-11 ./multi_video_detection && tail -f /dev/null"
         )
 
         try:
@@ -412,8 +412,7 @@ class AppServerExecutor:
         try:
             stop_cmd = (
                 "tmux kill-session -t video_detection 2>/dev/null || true; "
-                "sudo pkill -f 'video_detector' 2>/dev/null || true; "
-                "sudo pkill -f 'yolo_detection.py' 2>/dev/null || true"
+                "sudo pkill -f 'multi_video_detection' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
                 host_name="edge1", command=stop_cmd, background=False
@@ -440,7 +439,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec &&"
-            " multi_video_detection && tail -f /dev/null"
+            " ./multi_video_detection && tail -f /dev/null"
         )
 
         try:
@@ -489,8 +488,7 @@ class AppServerExecutor:
         try:
             stop_cmd = (
                 "tmux kill-session -t video_detection_smec 2>/dev/null || true;"
-                " sudo pkill -f 'video_detector' 2>/dev/null || true; sudo"
-                " pkill -f 'yolo_detection.py' 2>/dev/null || true"
+                " sudo pkill -f 'multi_video_detection' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
                 host_name="edge1", command=stop_cmd, background=False
@@ -517,7 +515,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && taskset -c"
-            " 0-11 multi_video_sr && tail -f /dev/null"
+            " 0-11 ./multi_video_sr && tail -f /dev/null"
         )
 
         try:
@@ -561,7 +559,7 @@ class AppServerExecutor:
         try:
             stop_cmd = (
                 "tmux kill-session -t video_sr 2>/dev/null || true; "
-                "sudo pkill -f 'video_sr_server' 2>/dev/null || true"
+                "sudo pkill -f 'multi_video_sr' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
                 host_name="edge1", command=stop_cmd, background=False
@@ -586,7 +584,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && "
-            "multi_video_sr && tail -f /dev/null"
+            "./multi_video_sr && tail -f /dev/null"
         )
 
         try:
@@ -632,7 +630,7 @@ class AppServerExecutor:
         try:
             stop_cmd = (
                 "tmux kill-session -t video_sr_smec 2>/dev/null || true; "
-                "sudo pkill -f 'video_sr_server' 2>/dev/null || true"
+                "sudo pkill -f 'multi_video_sr' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
                 host_name="edge1", command=stop_cmd, background=False
