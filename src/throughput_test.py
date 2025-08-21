@@ -3,7 +3,7 @@
 Throughput Test Module
 
 This module provides throughput testing functionality using iperf3:
-- Starts iperf3 server on edge1
+- Starts iperf3 server on ipu0
 - Runs iperf3 client on amari (in UE namespace)
 - Collects and displays results
 - Cleans up processes after completion
@@ -39,24 +39,22 @@ class ThroughputTest:
 
     def start_iperf3_server(self) -> Dict[str, Any]:
         """
-        Start iperf3 server on edge1.
+        Start iperf3 server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting iperf3 server on edge1...")
+        self.logger.info("Starting iperf3 server on ipu0...")
 
         command = "iperf3 -s"
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=command, session_name="iperf3_server"
+                host_name="ipu0", command=command, session_name="iperf3_server"
             )
 
             if result["success"]:
-                self.logger.info(
-                    "✓ iperf3 server started successfully on edge1"
-                )
+                self.logger.info("✓ iperf3 server started successfully on ipu0")
                 self.logger.info(
                     f"Session name: {result.get('session_name', 'N/A')}"
                 )
@@ -74,7 +72,7 @@ class ThroughputTest:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def run_iperf3_client(
@@ -222,12 +220,12 @@ class ThroughputTest:
 
     def stop_iperf3_server(self) -> Dict[str, Any]:
         """
-        Stop iperf3 server on edge1.
+        Stop iperf3 server on ipu0.
 
         Returns:
             Dictionary containing cleanup results
         """
-        self.logger.info("Stopping iperf3 server on edge1...")
+        self.logger.info("Stopping iperf3 server on ipu0...")
 
         try:
             stop_cmd = (
@@ -235,7 +233,7 @@ class ThroughputTest:
                 "sudo pkill -f 'iperf3 -s' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("✓ iperf3 server stopped successfully")
@@ -255,27 +253,27 @@ class ThroughputTest:
         self.logger.info("Cleaning up iperf3 processes...")
 
         cleanup_results = {
-            "edge1": None,
+            "ipu0": None,
             "amari": None,
             "overall_success": True,
         }
 
-        # Cleanup on edge1
+        # Cleanup on ipu0
         try:
-            edge1_cmd = (
+            ipu0_cmd = (
                 "tmux kill-session -t iperf3_server 2>/dev/null || true; "
                 "sudo pkill -f 'iperf3' 2>/dev/null || true"
             )
-            edge1_result = self.host_manager.execute_on_host(
-                host_name="edge1", command=edge1_cmd, background=False
+            ipu0_result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=ipu0_cmd, background=False
             )
-            edge1_result["success"] = True
-            cleanup_results["edge1"] = edge1_result
-            self.logger.info("✓ edge1 iperf3 processes cleaned up")
+            ipu0_result["success"] = True
+            cleanup_results["ipu0"] = ipu0_result
+            self.logger.info("✓ ipu0 iperf3 processes cleaned up")
 
         except Exception as e:
-            self.logger.error(f"Error cleaning up edge1: {e}")
-            cleanup_results["edge1"] = {"success": False, "error": str(e)}
+            self.logger.error(f"Error cleaning up ipu0: {e}")
+            cleanup_results["ipu0"] = {"success": False, "error": str(e)}
             cleanup_results["overall_success"] = False
 
         # Cleanup on amari
@@ -310,7 +308,7 @@ class ThroughputTest:
             status_symbol = "✓" if status else "✗"
             self.logger.info(f"  {host}: {status_symbol}")
 
-        required_hosts = ["edge1", "amari"]
+        required_hosts = ["ipu0", "amari"]
         missing_hosts = [
             host
             for host in required_hosts

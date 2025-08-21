@@ -48,15 +48,15 @@ hosts:
     timeout: 30
     description: "Edge0 host via proxy"
     
-  edge1:
-    host: edge1
+  ipu0:
+    host: ipu0
     user: zx
     port: 22
     key_filename: ~/.ssh/id_rsa
     proxy_command: ssh zx@dex.csres.utexas.edu -W %h:%p
     forward_agent: false
     timeout: 30
-    description: "Edge1 host via proxy"
+    description: "IPU0 host via proxy"
 
 defaults:
   timeout: 30

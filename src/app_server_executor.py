@@ -2,7 +2,7 @@
 """
 App Server Executor
 
-This module manages various application servers on edge1 host:
+This module manages various application servers on ipu0 host:
 - File Transfer Server
 - File Transfer SMEC Server
 - Video Transcoding Server
@@ -17,7 +17,7 @@ from .host_manager import HostManager
 
 
 class AppServerExecutor:
-    """Executor for managing application servers on edge1."""
+    """Executor for managing application servers on ipu0."""
 
     def __init__(self, config_file: str = "hosts_config.yaml"):
         """
@@ -40,12 +40,12 @@ class AppServerExecutor:
     # File Transfer Server Functions
     def start_file_transfer_server(self) -> Dict[str, Any]:
         """
-        Start file transfer server on edge1.
+        Start file transfer server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting file transfer server on edge1...")
+        self.logger.info("Starting file transfer server on ipu0...")
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/file-transfer && "
@@ -54,7 +54,7 @@ class AppServerExecutor:
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=command, session_name="file_server"
+                host_name="ipu0", command=command, session_name="file_server"
             )
 
             if result["success"]:
@@ -78,17 +78,17 @@ class AppServerExecutor:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_file_transfer_server(self) -> Dict[str, Any]:
         """
-        Stop file transfer server on edge1.
+        Stop file transfer server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping file transfer server on edge1...")
+        self.logger.info("Stopping file transfer server on ipu0...")
 
         try:
             stop_cmd = (
@@ -96,7 +96,7 @@ class AppServerExecutor:
                 "sudo pkill -f 'main.py' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("File transfer server stopped successfully")
@@ -111,12 +111,12 @@ class AppServerExecutor:
     # File Transfer SMEC Server Functions
     def start_file_transfer_smec_server(self) -> Dict[str, Any]:
         """
-        Start file transfer SMEC server on edge1.
+        Start file transfer SMEC server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting file transfer SMEC server on edge1...")
+        self.logger.info("Starting file transfer SMEC server on ipu0...")
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/file-transfer-smec && "
@@ -125,7 +125,7 @@ class AppServerExecutor:
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=command,
                 session_name="file_server_smec",
             )
@@ -154,17 +154,17 @@ class AppServerExecutor:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_file_transfer_smec_server(self) -> Dict[str, Any]:
         """
-        Stop file transfer SMEC server on edge1.
+        Stop file transfer SMEC server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping file transfer SMEC server on edge1...")
+        self.logger.info("Stopping file transfer SMEC server on ipu0...")
 
         try:
             stop_cmd = (
@@ -172,7 +172,7 @@ class AppServerExecutor:
                 "sudo pkill -f 'main.py' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("File transfer SMEC server stopped successfully")
@@ -189,7 +189,7 @@ class AppServerExecutor:
         self, instance_count: int = 2
     ) -> Dict[str, Any]:
         """
-        Start video transcoding server on edge1.
+        Start video transcoding server on ipu0.
 
         Args:
             instance_count: Number of server instances to start
@@ -198,7 +198,7 @@ class AppServerExecutor:
             Dictionary containing execution results
         """
         self.logger.info(
-            "Starting video transcoding server on edge1 with"
+            "Starting video transcoding server on ipu0 with"
             f" {instance_count} instances..."
         )
 
@@ -209,7 +209,7 @@ class AppServerExecutor:
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=command,
                 session_name="video_transcoding",
             )
@@ -238,17 +238,17 @@ class AppServerExecutor:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_video_transcoding_server(self) -> Dict[str, Any]:
         """
-        Stop video transcoding server on edge1.
+        Stop video transcoding server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video transcoding server on edge1...")
+        self.logger.info("Stopping video transcoding server on ipu0...")
 
         try:
             stop_cmd = (
@@ -256,7 +256,7 @@ class AppServerExecutor:
                 "sudo pkill -f 'transcoder' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("Video transcoding server stopped successfully")
@@ -273,7 +273,7 @@ class AppServerExecutor:
         self, instance_count: int = 2
     ) -> Dict[str, Any]:
         """
-        Start video transcoding SMEC server on edge1.
+        Start video transcoding SMEC server on ipu0.
 
         Args:
             instance_count: Number of server instances to start
@@ -282,7 +282,7 @@ class AppServerExecutor:
             Dictionary containing execution results
         """
         self.logger.info(
-            "Starting video transcoding SMEC server on edge1 with"
+            "Starting video transcoding SMEC server on ipu0 with"
             f" {instance_count} instances..."
         )
 
@@ -293,7 +293,7 @@ class AppServerExecutor:
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=command,
                 session_name="video_transcoding_smec",
             )
@@ -322,17 +322,17 @@ class AppServerExecutor:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_video_transcoding_smec_server(self) -> Dict[str, Any]:
         """
-        Stop video transcoding SMEC server on edge1.
+        Stop video transcoding SMEC server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video transcoding SMEC server on edge1...")
+        self.logger.info("Stopping video transcoding SMEC server on ipu0...")
 
         try:
             stop_cmd = (
@@ -340,7 +340,7 @@ class AppServerExecutor:
                 " true; sudo pkill -f 'transcoder' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info(
@@ -357,21 +357,22 @@ class AppServerExecutor:
     # Video Detection Server Functions
     def start_video_detection_server(self) -> Dict[str, Any]:
         """
-        Start video detection server on edge1.
+        Start video detection server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting video detection server on edge1...")
+        self.logger.info("Starting video detection server on ipu0...")
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
-            " taskset -c 0-11 ./multi_video_detection && tail -f /dev/null"
+            " taskset -c 0-11 ./multi_video_detection yolov8m.pt 2 5 && tail -f"
+            " /dev/null"
         )
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=command,
                 session_name="video_detection",
             )
@@ -397,17 +398,17 @@ class AppServerExecutor:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_video_detection_server(self) -> Dict[str, Any]:
         """
-        Stop video detection server on edge1.
+        Stop video detection server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video detection server on edge1...")
+        self.logger.info("Stopping video detection server on ipu0...")
 
         try:
             stop_cmd = (
@@ -415,7 +416,7 @@ class AppServerExecutor:
                 "sudo pkill -f 'multi_video_detection' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("Video detection server stopped successfully")
@@ -430,21 +431,21 @@ class AppServerExecutor:
     # Video Detection SMEC Server Functions
     def start_video_detection_smec_server(self) -> Dict[str, Any]:
         """
-        Start video detection SMEC server on edge1.
+        Start video detection SMEC server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting video detection SMEC server on edge1...")
+        self.logger.info("Starting video detection SMEC server on ipu0...")
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec &&"
-            " ./multi_video_detection && tail -f /dev/null"
+            " ./multi_video_detection yolov8m.pt 2 && tail -f /dev/null"
         )
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=command,
                 session_name="video_detection_smec",
             )
@@ -473,17 +474,17 @@ class AppServerExecutor:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_video_detection_smec_server(self) -> Dict[str, Any]:
         """
-        Stop video detection SMEC server on edge1.
+        Stop video detection SMEC server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video detection SMEC server on edge1...")
+        self.logger.info("Stopping video detection SMEC server on ipu0...")
 
         try:
             stop_cmd = (
@@ -491,7 +492,7 @@ class AppServerExecutor:
                 " sudo pkill -f 'multi_video_detection' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("Video detection SMEC server stopped successfully")
@@ -506,21 +507,21 @@ class AppServerExecutor:
     # Video SR Server Functions
     def start_video_sr_server(self) -> Dict[str, Any]:
         """
-        Start video SR server on edge1.
+        Start video SR server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting video SR server on edge1...")
+        self.logger.info("Starting video SR server on ipu0...")
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && taskset -c"
-            " 0-11 ./multi_video_sr && tail -f /dev/null"
+            " 0-11 ./multi_video_sr 2 5 && tail -f /dev/null"
         )
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=command,
                 session_name="video_sr",
             )
@@ -544,17 +545,17 @@ class AppServerExecutor:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_video_sr_server(self) -> Dict[str, Any]:
         """
-        Stop video SR server on edge1.
+        Stop video SR server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video SR server on edge1...")
+        self.logger.info("Stopping video SR server on ipu0...")
 
         try:
             stop_cmd = (
@@ -562,7 +563,7 @@ class AppServerExecutor:
                 "sudo pkill -f 'multi_video_sr' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("Video SR server stopped successfully")
@@ -575,12 +576,12 @@ class AppServerExecutor:
     # Video SR SMEC Server Functions
     def start_video_sr_smec_server(self) -> Dict[str, Any]:
         """
-        Start video SR SMEC server on edge1.
+        Start video SR SMEC server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting video SR SMEC server on edge1...")
+        self.logger.info("Starting video SR SMEC server on ipu0...")
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && "
@@ -589,7 +590,7 @@ class AppServerExecutor:
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=command,
                 session_name="video_sr_smec",
             )
@@ -615,17 +616,17 @@ class AppServerExecutor:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_video_sr_smec_server(self) -> Dict[str, Any]:
         """
-        Stop video SR SMEC server on edge1.
+        Stop video SR SMEC server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping video SR SMEC server on edge1...")
+        self.logger.info("Stopping video SR SMEC server on ipu0...")
 
         try:
             stop_cmd = (
@@ -633,7 +634,7 @@ class AppServerExecutor:
                 "sudo pkill -f 'multi_video_sr' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("Video SR SMEC server stopped successfully")
@@ -730,7 +731,7 @@ class AppServerExecutor:
         try:
             # Check all tmux sessions
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=(
                     "tmux list-sessions 2>/dev/null || echo 'No tmux sessions'"
                 ),

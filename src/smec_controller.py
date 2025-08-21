@@ -3,7 +3,7 @@
 SMEC Controller
 
 This module manages SMEC (Smart Multi-access Edge Computing) controller components:
-- SMEC Controller Server on edge1 (runs python run.py)
+- SMEC Controller Server on ipu0 (runs python run.py)
 - SMEC Controller Client on amari (runs python run_amarisoft.py 1,2...)
 """
 
@@ -14,7 +14,7 @@ from .host_manager import HostManager
 
 
 class SMECController:
-    """Controller for managing SMEC controller components on edge1 and amari."""
+    """Controller for managing SMEC controller components on ipu0 and amari."""
 
     def __init__(self, config_file: str = "hosts_config.yaml"):
         """
@@ -34,21 +34,21 @@ class SMECController:
         )
         self.logger = logging.getLogger(__name__)
 
-    # SMEC Controller Server Functions (edge1)
+    # SMEC Controller Server Functions (ipu0)
     def start_smec_server(self) -> Dict[str, Any]:
         """
-        Start SMEC controller server on edge1.
+        Start SMEC controller server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting SMEC controller server on edge1...")
+        self.logger.info("Starting SMEC controller server on ipu0...")
 
         command = "cd ~/edge-server-scheduler && python run.py"
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=command,
                 session_name="smec_controller",
             )
@@ -74,17 +74,17 @@ class SMECController:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge1",
+                "connection_info": "ipu0",
             }
 
     def stop_smec_server(self) -> Dict[str, Any]:
         """
-        Stop SMEC controller server on edge1.
+        Stop SMEC controller server on ipu0.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Stopping SMEC controller server on edge1...")
+        self.logger.info("Stopping SMEC controller server on ipu0...")
 
         try:
             stop_cmd = (
@@ -92,7 +92,7 @@ class SMECController:
                 "sudo pkill -f 'server_scheduler' 2>/dev/null || true"
             )
             result = self.host_manager.execute_on_host(
-                host_name="edge1", command=stop_cmd, background=False
+                host_name="ipu0", command=stop_cmd, background=False
             )
             result["success"] = True
             self.logger.info("SMEC controller server stopped successfully")
@@ -261,9 +261,9 @@ class SMECController:
         self.logger.info("Checking SMEC controller system status...")
 
         try:
-            # Check server status on edge1
+            # Check server status on ipu0
             server_result = self.host_manager.execute_on_host(
-                host_name="edge1",
+                host_name="ipu0",
                 command=(
                     "tmux list-sessions 2>/dev/null | grep smec_controller ||"
                     " echo 'No smec_controller session'"
