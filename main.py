@@ -243,8 +243,9 @@ def complete_application_deployment(
     if smec_ue_indices != "":
         logger.info("Deploying SMEC controller...")
         smec_controller = SMECController()
+        max_cpus = experiment_config.get_max_cpus()
         deployment_results["smec_controller"] = (
-            smec_controller.start_smec_system(smec_ue_indices)
+            smec_controller.start_smec_system(smec_ue_indices, max_cpus)
         )
 
         if not deployment_results["smec_controller"]["overall_success"]:
@@ -257,6 +258,7 @@ def complete_application_deployment(
     # Step 5: Deploy server applications based on config order
     logger.info("Deploying server applications...")
     server_executor = AppServerExecutor()
+    max_cpus = experiment_config.get_max_cpus()
 
     # Deploy servers based on the order they appear in JSON config file
     server_count = 0
@@ -274,9 +276,9 @@ def complete_application_deployment(
                         "video_detection_smec"
                     ] = server_executor.start_video_detection_smec_server()
                 else:
-                    deployment_results["server_apps"][
-                        "video_detection"
-                    ] = server_executor.start_video_detection_server()
+                    deployment_results["server_apps"]["video_detection"] = (
+                        server_executor.start_video_detection_server(max_cpus)
+                    )
                 server_count += 1
 
             elif key == "transcoding_ue_indices":
@@ -293,7 +295,7 @@ def complete_application_deployment(
                 else:
                     deployment_results["server_apps"]["video_transcoding"] = (
                         server_executor.start_video_transcoding_server(
-                            transcoding_instances
+                            transcoding_instances, max_cpus
                         )
                     )
                 server_count += 1
@@ -305,9 +307,9 @@ def complete_application_deployment(
                         "video_sr_smec"
                     ] = server_executor.start_video_sr_smec_server()
                 else:
-                    deployment_results["server_apps"][
-                        "video_sr"
-                    ] = server_executor.start_video_sr_server()
+                    deployment_results["server_apps"]["video_sr"] = (
+                        server_executor.start_video_sr_server(max_cpus)
+                    )
                 server_count += 1
 
             elif key == "file_transfer_ue_indices":
@@ -317,9 +319,9 @@ def complete_application_deployment(
                         "file_transfer_smec"
                     ] = server_executor.start_file_transfer_smec_server()
                 else:
-                    deployment_results["server_apps"][
-                        "file_transfer"
-                    ] = server_executor.start_file_transfer_server()
+                    deployment_results["server_apps"]["file_transfer"] = (
+                        server_executor.start_file_transfer_server(max_cpus)
+                    )
                 server_count += 1
 
     # Wait for servers to start

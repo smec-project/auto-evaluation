@@ -35,16 +35,22 @@ class SMECController:
         self.logger = logging.getLogger(__name__)
 
     # SMEC Controller Server Functions (ipu0)
-    def start_smec_server(self) -> Dict[str, Any]:
+    def start_smec_server(self, max_cpus: int = 32) -> Dict[str, Any]:
         """
         Start SMEC controller server on ipu0.
+
+        Args:
+            max_cpus: Maximum number of CPUs to use (default: 32)
 
         Returns:
             Dictionary containing execution results
         """
         self.logger.info("Starting SMEC controller server on ipu0...")
 
-        command = "cd ~/edge-server-scheduler && python run.py"
+        command = (
+            "cd ~/edge-server-scheduler && ./server_scheduler --numa-node 1"
+            f" --max-cpus {max_cpus}"
+        )
 
         try:
             result = self.host_manager.execute_on_host(
@@ -183,7 +189,9 @@ class SMECController:
             return {"success": False, "error": str(e)}
 
     # Batch Operations
-    def start_smec_system(self, ue_indices: str = "1,2") -> Dict[str, Any]:
+    def start_smec_system(
+        self, ue_indices: str = "1,2", max_cpus: int = 32
+    ) -> Dict[str, Any]:
         """
         Start both SMEC controller server and client.
 
@@ -191,6 +199,7 @@ class SMECController:
 
         Args:
             ue_indices: Comma-separated UE indices for the client (e.g., "1,2,3,4")
+            max_cpus: Maximum number of CPUs to use (default: 32)
 
         Returns:
             Dictionary containing results for both components
@@ -198,7 +207,7 @@ class SMECController:
         self.logger.info("Starting SMEC controller system...")
 
         # Start server first, then client
-        server_result = self.start_smec_server()
+        server_result = self.start_smec_server(max_cpus)
         time.sleep(3)
         client_result = self.start_smec_client(ue_indices)
 
@@ -315,7 +324,9 @@ class SMECController:
                 "error": str(e),
             }
 
-    def restart_smec_system(self, ue_indices: str = "1,2") -> Dict[str, Any]:
+    def restart_smec_system(
+        self, ue_indices: str = "1,2", max_cpus: int = 32
+    ) -> Dict[str, Any]:
         """
         Restart the entire SMEC controller system.
 
@@ -323,6 +334,7 @@ class SMECController:
 
         Args:
             ue_indices: Comma-separated UE indices for the client (e.g., "1,2,3,4")
+            max_cpus: Maximum number of CPUs to use (default: 32)
 
         Returns:
             Dictionary containing restart operation results
@@ -338,7 +350,7 @@ class SMECController:
         time.sleep(2)
 
         # Start the system again
-        start_results = self.start_smec_system(ue_indices)
+        start_results = self.start_smec_system(ue_indices, max_cpus)
 
         results = {
             "stop_results": stop_results,

@@ -3,5 +3,6 @@
     "smec_ue_indices": "1,2",
     "video_detection_ue_indices": "",
     "transcoding_ue_indices": "1,2",
-    "file_transfer_ue_indices": ""
+    "file_transfer_ue_indices": "",
+    "max_cpus": 32
 }

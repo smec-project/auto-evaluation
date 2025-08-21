@@ -37,20 +37,52 @@ class AppServerExecutor:
         )
         self.logger = logging.getLogger(__name__)
 
+    def _generate_cpu_affinity(self, max_cpus: int) -> str:
+        """
+        Generate CPU affinity string for taskset using odd-numbered CPUs.
+
+        Args:
+            max_cpus: Maximum number of CPUs to use
+
+        Returns:
+            CPU list string for taskset (e.g., "1,3,5,7")
+        """
+        # Generate odd-numbered CPUs up to max_cpus
+        odd_cpus = [str(i) for i in range(1, max_cpus + 1, 2)]
+        return ",".join(odd_cpus)
+
+    def _add_cpu_affinity(self, command: str, max_cpus: int) -> str:
+        """
+        Add CPU affinity (taskset) to a command for non-SMEC applications.
+
+        Args:
+            command: Original command
+            max_cpus: Maximum number of CPUs to use
+
+        Returns:
+            Command with taskset CPU affinity
+        """
+        cpu_list = self._generate_cpu_affinity(max_cpus)
+        return f"taskset -c {cpu_list} {command}"
+
     # File Transfer Server Functions
-    def start_file_transfer_server(self) -> Dict[str, Any]:
+    def start_file_transfer_server(self, max_cpus: int = 32) -> Dict[str, Any]:
         """
         Start file transfer server on ipu0.
+
+        Args:
+            max_cpus: Maximum number of CPUs to use for CPU affinity (default: 32)
 
         Returns:
             Dictionary containing execution results
         """
         self.logger.info("Starting file transfer server on ipu0...")
 
-        command = (
+        base_command = (
             "cd ~/edge-server-scheduler/edge-apps/file-transfer && "
             "python main.py"
         )
+        command = self._add_cpu_affinity(base_command, max_cpus)
 
         try:
             result = self.host_manager.execute_on_host(
@@ -186,13 +218,14 @@ class AppServerExecutor:
 
     # Video Transcoding Server Functions
     def start_video_transcoding_server(
-        self, instance_count: int = 2
+        self, instance_count: int = 2, max_cpus: int = 32
     ) -> Dict[str, Any]:
         """
         Start video transcoding server on ipu0.
 
         Args:
             instance_count: Number of server instances to start
+            max_cpus: Maximum number of CPUs to use for CPU affinity (default: 32)
 
         Returns:
             Dictionary containing execution results
@@ -202,10 +235,11 @@ class AppServerExecutor:
             f" {instance_count} instances..."
         )
 
-        command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding && taskset"
-            f" -c 0-11 python3 run.py {instance_count} && tail -f /dev/null"
+        base_command = (
+            "cd ~/edge-server-scheduler/edge-apps/video-transcoding && "
+            f"python3 run.py {instance_count} && tail -f /dev/null"
         )
+        command = self._add_cpu_affinity(base_command, max_cpus)
 
         try:
             result = self.host_manager.execute_on_host(
@@ -355,20 +389,25 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Video Detection Server Functions
-    def start_video_detection_server(self) -> Dict[str, Any]:
+    def start_video_detection_server(
+        self, max_cpus: int = 32
+    ) -> Dict[str, Any]:
         """
         Start video detection server on ipu0.
+
+        Args:
+            max_cpus: Maximum number of CPUs to use for CPU affinity (default: 32)
 
         Returns:
             Dictionary containing execution results
         """
         self.logger.info("Starting video detection server on ipu0...")
 
-        command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
-            " taskset -c 0-11 ./multi_video_detection yolov8m.pt 2 5 && tail -f"
-            " /dev/null"
+        base_command = (
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection && "
+            "./multi_video_detection yolov8m.pt 2 10 && tail -f /dev/null"
         )
+        command = self._add_cpu_affinity(base_command, max_cpus)
 
         try:
             result = self.host_manager.execute_on_host(
@@ -505,19 +544,23 @@ class AppServerExecutor:
             return {"success": False, "error": str(e)}
 
     # Video SR Server Functions
-    def start_video_sr_server(self) -> Dict[str, Any]:
+    def start_video_sr_server(self, max_cpus: int = 32) -> Dict[str, Any]:
         """
         Start video SR server on ipu0.
+
+        Args:
+            max_cpus: Maximum number of CPUs to use for CPU affinity (default: 32)
 
         Returns:
             Dictionary containing execution results
         """
         self.logger.info("Starting video SR server on ipu0...")
 
-        command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && taskset -c"
-            " 0-11 ./multi_video_sr 2 5 && tail -f /dev/null"
+        base_command = (
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && "
+            "./multi_video_sr 2 10 && tail -f /dev/null"
         )
+        command = self._add_cpu_affinity(base_command, max_cpus)
 
         try:
             result = self.host_manager.execute_on_host(
@@ -650,12 +693,14 @@ class AppServerExecutor:
     def start_all_servers(
         self,
         video_transcoding_instance_count: int = 2,
+        max_cpus: int = 32,
     ) -> Dict[str, Any]:
         """
         Start all application servers.
 
         Args:
             video_transcoding_instance_count: Number of instances for video transcoding servers
+            max_cpus: Maximum number of CPUs to use for CPU affinity (default: 32)
 
         Returns:
             Dictionary containing results for all servers
@@ -663,17 +708,17 @@ class AppServerExecutor:
         self.logger.info("Starting all application servers...")
 
         results = {
-            "file_server": self.start_file_transfer_server(),
+            "file_server": self.start_file_transfer_server(max_cpus),
             "file_server_smec": self.start_file_transfer_smec_server(),
             "video_transcoding": self.start_video_transcoding_server(
-                video_transcoding_instance_count
+                video_transcoding_instance_count, max_cpus
             ),
             "video_transcoding_smec": self.start_video_transcoding_smec_server(
                 video_transcoding_instance_count
             ),
-            "video_detection": self.start_video_detection_server(),
+            "video_detection": self.start_video_detection_server(max_cpus),
             "video_detection_smec": self.start_video_detection_smec_server(),
-            "video_sr": self.start_video_sr_server(),
+            "video_sr": self.start_video_sr_server(max_cpus),
             "video_sr_smec": self.start_video_sr_smec_server(),
         }
 

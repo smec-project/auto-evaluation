@@ -118,6 +118,15 @@ class ConfigLoader:
         """
         return self.config_data.get("num_ues", 8)
 
+    def get_max_cpus(self) -> int:
+        """
+        Get the maximum number of CPUs configured.
+
+        Returns:
+            Maximum number of CPUs (default: 32)
+        """
+        return self.config_data.get("max_cpus", 32)
+
     def calculate_server_instances(self, ue_indices: str) -> int:
         """
         Calculate the number of server instances based on UE indices.
