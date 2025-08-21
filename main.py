@@ -258,7 +258,7 @@ def complete_application_deployment(
     # Step 5: Deploy server applications based on config order
     logger.info("Deploying server applications...")
     server_executor = AppServerExecutor()
-    max_cpus = experiment_config.get_max_cpus()
+    num_cpus = experiment_config.get_max_cpus()
 
     # Deploy servers based on the order they appear in JSON config file
     server_count = 0

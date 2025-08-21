@@ -64,7 +64,7 @@ class AppServerExecutor:
             Command with taskset CPU affinity
         """
         cpu_list = self._generate_cpu_affinity(num_cpus)
-        return f'taskset -c {cpu_list} bash -c "{command}"'
+        return f'taskset -c {cpu_list} bash -i -c "{command}"'
 
     # File Transfer Server Functions
     def start_file_transfer_server(self, num_cpus: int = 32) -> Dict[str, Any]:
@@ -405,8 +405,9 @@ class AppServerExecutor:
         self.logger.info("Starting video detection server on ipu0...")
 
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection && "
-            "./multi_video_detection yolov8m.pt 2 10 && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
+            " conda activate video-detection && ./multi_video_detection"
+            " yolov8m.pt 2 10 && tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
 
@@ -480,7 +481,8 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec &&"
-            " ./multi_video_detection yolov8m.pt 2 && tail -f /dev/null"
+            " conda activate video-detection && ./multi_video_detection"
+            " yolov8m.pt 2 && tail -f /dev/null"
         )
 
         try:
@@ -558,8 +560,8 @@ class AppServerExecutor:
         self.logger.info("Starting video SR server on ipu0...")
 
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && "
-            "./multi_video_sr 2 10 && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && conda"
+            " activate video-sr && ./multi_video_sr 2 10 && tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
 
@@ -628,8 +630,8 @@ class AppServerExecutor:
         self.logger.info("Starting video SR SMEC server on ipu0...")
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && "
-            "./multi_video_sr && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && conda"
+            " activate video-sr &&./multi_video_sr && tail -f /dev/null"
         )
 
         try:
