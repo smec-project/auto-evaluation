@@ -406,8 +406,9 @@ class AppServerExecutor:
 
         base_command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
-            " conda activate video-detection && ./multi_video_detection"
-            " yolov8m.pt 2 10 && tail -f /dev/null"
+            " source ~/miniconda3/etc/profile.d/conda.sh && conda activate"
+            " video-detection && ./multi_video_detection yolov8m.pt 2 10 &&"
+            " tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
 
@@ -481,8 +482,9 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec &&"
-            " conda activate video-detection && ./multi_video_detection"
-            " yolov8m.pt 2 && tail -f /dev/null"
+            " source ~/miniconda3/etc/profile.d/conda.sh && conda activate"
+            " video-detection && ./multi_video_detection yolov8m.pt 2 && tail"
+            " -f /dev/null"
         )
 
         try:
@@ -560,8 +562,9 @@ class AppServerExecutor:
         self.logger.info("Starting video SR server on ipu0...")
 
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && conda"
-            " activate video-sr && ./multi_video_sr 2 10 && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && source"
+            " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
+            " ./multi_video_sr 2 10 && tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
 
@@ -630,8 +633,9 @@ class AppServerExecutor:
         self.logger.info("Starting video SR SMEC server on ipu0...")
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && conda"
-            " activate video-sr &&./multi_video_sr && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && source"
+            " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
+            " ./multi_video_sr && tail -f /dev/null"
         )
 
         try:
