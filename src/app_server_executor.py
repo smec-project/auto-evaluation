@@ -322,8 +322,9 @@ class AppServerExecutor:
         )
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-smec && "
-            f"python3 run.py {instance_count} && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-smec &&"
+            f" python3 run.py {instance_count} --scheduler-drop 0 && tail -f"
+            " /dev/null"
         )
 
         try:
