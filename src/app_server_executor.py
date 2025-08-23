@@ -238,6 +238,7 @@ class AppServerExecutor:
 
         base_command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding && "
+            "make clean && make -j 8 && "
             f"python3 run.py {instance_count} && tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
@@ -323,6 +324,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding-smec &&"
+            " make clean && make -j 8 &&"
             f" python3 run.py {instance_count} --scheduler-drop 0 && tail -f"
             " /dev/null"
         )
@@ -407,6 +409,7 @@ class AppServerExecutor:
 
         base_command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
+            " make clean && make -j 8 &&"
             " source ~/miniconda3/etc/profile.d/conda.sh && conda activate"
             " video-detection && ./multi_video_detection yolov8m.pt 2 10 &&"
             " tail -f /dev/null"
@@ -483,6 +486,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec &&"
+            " make clean && make -j 8 &&"
             " source ~/miniconda3/etc/profile.d/conda.sh && conda activate"
             " video-detection && ./multi_video_detection yolov8m.pt 2 && tail"
             " -f /dev/null"
@@ -563,7 +567,8 @@ class AppServerExecutor:
         self.logger.info("Starting video SR server on ipu0...")
 
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && source"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && "
+            "make clean && make -j 8 && source"
             " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
             " ./multi_video_sr 2 10 && tail -f /dev/null"
         )
@@ -634,7 +639,8 @@ class AppServerExecutor:
         self.logger.info("Starting video SR SMEC server on ipu0...")
 
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && source"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && "
+            "make clean && make -j 8 && source"
             " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
             " ./multi_video_sr && tail -f /dev/null"
         )

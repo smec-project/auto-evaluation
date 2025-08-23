@@ -295,7 +295,7 @@ def complete_application_deployment(
                 else:
                     deployment_results["server_apps"]["video_transcoding"] = (
                         server_executor.start_video_transcoding_server(
-                            transcoding_instances, max_cpus
+                            transcoding_instances, num_cpus
                         )
                     )
                 server_count += 1

@@ -219,7 +219,8 @@ class AppClientExecutor:
         )
 
         command = (
-            "cd ~/edge-client-prober/edge-apps/video-transcoding && python3"
+            "cd ~/edge-client-prober/edge-apps/video-transcoding && "
+            "make clean && make -j 8 && python3"
             " run_amarisoft.py"
             " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
@@ -306,7 +307,7 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding-smec &&"
-            " python3 run_amarisoft.py"
+            " make clean && make -j 8 && python3 run_amarisoft.py"
             " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
@@ -393,7 +394,8 @@ class AppClientExecutor:
         )
 
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-detection && python3"
+            "cd ~/edge-client-prober/edge-apps/multi-video-detection && "
+            "make clean && make -j 8 && python3"
             " run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
@@ -477,7 +479,7 @@ class AppClientExecutor:
 
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-detection-smec &&"
-            " python3 run_amarisoft.py"
+            " make clean && make -j 8 && python3 run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
@@ -560,7 +562,8 @@ class AppClientExecutor:
         )
 
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-sr && python3"
+            "cd ~/edge-client-prober/edge-apps/multi-video-sr && "
+            "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
@@ -638,7 +641,8 @@ class AppClientExecutor:
         )
 
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-sr-smec && python3"
+            "cd ~/edge-client-prober/edge-apps/multi-video-sr-smec && "
+            "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
             f" {ue_indices} && tail -f /dev/null"
         )
