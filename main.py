@@ -3,16 +3,19 @@
 Main Entry Point for SMEC Experiment Automation
 
 This script handles the deployment, cleanup, and testing of SMEC experimental environments.
-It supports three operations:
-- Operation 0: Deploy environment (basic or SMEC based on configuration)
+It supports five operations:
+- Operation 0: Deploy full environment (basic or SMEC based on configuration)
 - Operation 1: Cleanup all deployed services
-- Operation 2: Run throughput test
+- Operation 2: Deploy only server and client applications
+- Operation 3: Cleanup only server and client applications
+- Operation 4: Run throughput test
 
 Usage:
     python main.py <config_file_path> <operation>
 
     config_file_path: Path to the JSON configuration file
-    operation: 0 for deploy, 1 for cleanup, 2 for throughput test
+    operation: 0 for full deploy, 1 for full cleanup, 2 for deploy services only,
+               3 for cleanup services only, 4 for throughput test
 """
 
 import json
@@ -535,6 +538,292 @@ def cleanup_environment(
     return cleanup_results
 
 
+def deploy_services_only(
+    config: Dict[str, Any], config_path: str, logger: logging.Logger
+) -> Dict[str, Any]:
+    """
+    Deploy only server and client applications without environment setup.
+
+    Args:
+        config: Configuration dictionary
+        config_path: Path to configuration file
+        logger: Logger instance
+
+    Returns:
+        Dictionary containing deployment results
+    """
+    logger.info("Starting server and client deployment...")
+
+    experiment_config = ConfigLoader(config_path)
+    smec_ue_indices = config.get("smec_ue_indices", "")
+
+    deployment_results = {
+        "smec_controller": None,
+        "server_apps": {},
+        "client_apps": {},
+        "overall_success": False,
+    }
+
+    # Deploy SMEC controller if smec_ue_indices is not empty
+    if smec_ue_indices != "":
+        logger.info("Deploying SMEC controller...")
+        smec_controller = SMECController()
+        num_cpus = experiment_config.get_max_cpus()
+        deployment_results["smec_controller"] = (
+            smec_controller.start_smec_system(smec_ue_indices, num_cpus)
+        )
+
+        if not deployment_results["smec_controller"]["overall_success"]:
+            logger.error("SMEC controller deployment failed")
+            return deployment_results
+
+        logger.info("Waiting 10 seconds for SMEC controller to stabilize...")
+        time.sleep(10)
+
+    # Deploy server applications based on config order
+    logger.info("Deploying server applications...")
+    server_executor = AppServerExecutor()
+    num_cpus = experiment_config.get_max_cpus()
+
+    # Deploy servers based on the order they appear in JSON config file
+    server_count = 0
+    for key in config.keys():
+        if key.endswith("_ue_indices") and config[key] != "":
+            # Add 2 second delay between server deployments (except for the first one)
+            if server_count > 0:
+                logger.info("Waiting 2 seconds before starting next server...")
+                time.sleep(2)
+
+            if key == "video_detection_ue_indices":
+                logger.info("Starting video detection server...")
+                if smec_ue_indices != "":
+                    deployment_results["server_apps"][
+                        "video_detection_smec"
+                    ] = server_executor.start_video_detection_smec_server()
+                else:
+                    deployment_results["server_apps"]["video_detection"] = (
+                        server_executor.start_video_detection_server(num_cpus)
+                    )
+                server_count += 1
+
+            elif key == "transcoding_ue_indices":
+                logger.info("Starting video transcoding server...")
+                transcoding_instances = (
+                    experiment_config.get_transcoding_server_instances()
+                )
+                if smec_ue_indices != "":
+                    deployment_results["server_apps"][
+                        "video_transcoding_smec"
+                    ] = server_executor.start_video_transcoding_smec_server(
+                        transcoding_instances
+                    )
+                else:
+                    deployment_results["server_apps"]["video_transcoding"] = (
+                        server_executor.start_video_transcoding_server(
+                            transcoding_instances, num_cpus
+                        )
+                    )
+                server_count += 1
+
+            elif key == "video_sr_ue_indices":
+                logger.info("Starting video SR server...")
+                if smec_ue_indices != "":
+                    deployment_results["server_apps"][
+                        "video_sr_smec"
+                    ] = server_executor.start_video_sr_smec_server()
+                else:
+                    deployment_results["server_apps"]["video_sr"] = (
+                        server_executor.start_video_sr_server(num_cpus)
+                    )
+                server_count += 1
+
+            elif key == "file_transfer_ue_indices":
+                logger.info("Starting file transfer server...")
+                if smec_ue_indices != "":
+                    deployment_results["server_apps"][
+                        "file_transfer_smec"
+                    ] = server_executor.start_file_transfer_smec_server()
+                else:
+                    deployment_results["server_apps"]["file_transfer"] = (
+                        server_executor.start_file_transfer_server(num_cpus)
+                    )
+                server_count += 1
+
+    # Wait for servers to start
+    if deployment_results["server_apps"]:
+        logger.info("Waiting 15 seconds for server applications to start...")
+        time.sleep(15)
+
+    # Deploy client applications based on config order
+    logger.info("Deploying client applications...")
+    client_executor = AppClientExecutor()
+
+    # Deploy clients based on the order they appear in JSON config file
+    client_count = 0
+    for key in config.keys():
+        if key.endswith("_ue_indices") and config[key] != "":
+            ue_indices = config[key]
+
+            # Add 2 second delay between client deployments (except for the first one)
+            if client_count > 0:
+                logger.info("Waiting 8 seconds before starting next client...")
+                time.sleep(8)
+
+            if key == "video_detection_ue_indices":
+                logger.info(
+                    "Starting video detection client with UE indices:"
+                    f" {ue_indices}"
+                )
+                if smec_ue_indices != "":
+                    deployment_results["client_apps"][
+                        "video_detection_smec"
+                    ] = client_executor.start_video_detection_smec_client(
+                        ue_indices
+                    )
+                else:
+                    deployment_results["client_apps"]["video_detection"] = (
+                        client_executor.start_video_detection_client(ue_indices)
+                    )
+                client_count += 1
+
+            elif key == "transcoding_ue_indices":
+                logger.info(
+                    "Starting video transcoding client with UE indices:"
+                    f" {ue_indices}"
+                )
+                if smec_ue_indices != "":
+                    deployment_results["client_apps"][
+                        "video_transcoding_smec"
+                    ] = client_executor.start_video_transcoding_smec_client(
+                        ue_indices
+                    )
+                else:
+                    deployment_results["client_apps"]["video_transcoding"] = (
+                        client_executor.start_video_transcoding_client(
+                            ue_indices
+                        )
+                    )
+                client_count += 1
+
+            elif key == "video_sr_ue_indices":
+                logger.info(
+                    f"Starting video SR client with UE indices: {ue_indices}"
+                )
+                if smec_ue_indices != "":
+                    deployment_results["client_apps"]["video_sr_smec"] = (
+                        client_executor.start_video_sr_smec_client(ue_indices)
+                    )
+                else:
+                    deployment_results["client_apps"]["video_sr"] = (
+                        client_executor.start_video_sr_client(ue_indices)
+                    )
+                client_count += 1
+
+            elif key == "file_transfer_ue_indices":
+                logger.info(
+                    "Starting file transfer client with UE indices:"
+                    f" {ue_indices}"
+                )
+                if smec_ue_indices != "":
+                    deployment_results["client_apps"]["file_transfer_smec"] = (
+                        client_executor.start_file_transfer_smec_client(
+                            ue_indices
+                        )
+                    )
+                else:
+                    deployment_results["client_apps"]["file_transfer"] = (
+                        client_executor.start_file_transfer_client(ue_indices)
+                    )
+                client_count += 1
+
+    # Wait 2 seconds before generating final summary
+    logger.info("Waiting 2 seconds before generating deployment summary...")
+    time.sleep(2)
+
+    # Check overall deployment success
+    server_success = all(
+        result.get("success", False)
+        for result in deployment_results["server_apps"].values()
+    )
+    client_success = all(
+        result.get("success", False)
+        for result in deployment_results["client_apps"].values()
+    )
+
+    deployment_results["overall_success"] = (
+        (
+            deployment_results["smec_controller"] is None
+            or deployment_results["smec_controller"]["overall_success"]
+        )
+        and server_success
+        and client_success
+    )
+
+    if deployment_results["overall_success"]:
+        logger.info("Server and client deployment completed successfully!")
+    else:
+        logger.error("Server and client deployment completed with errors")
+
+    return deployment_results
+
+
+def cleanup_services_only(
+    config: Dict[str, Any], logger: logging.Logger
+) -> Dict[str, Any]:
+    """
+    Cleanup only server and client applications.
+
+    Args:
+        config: Configuration dictionary
+        logger: Logger instance
+
+    Returns:
+        Dictionary containing cleanup results
+    """
+    logger.info("Starting server and client cleanup...")
+
+    cleanup_results = {
+        "client_apps": {},
+        "server_apps": {},
+        "smec_controller": None,
+        "overall_success": False,
+    }
+
+    # Stop client applications
+    logger.info("Stopping client applications...")
+    client_executor = AppClientExecutor()
+    cleanup_results["client_apps"] = client_executor.stop_all_clients()
+
+    # Stop server applications
+    logger.info("Stopping server applications...")
+    server_executor = AppServerExecutor()
+    cleanup_results["server_apps"] = server_executor.stop_all_servers()
+
+    # Stop SMEC controller if it was deployed
+    smec_ue_indices = config.get("smec_ue_indices", "")
+    if smec_ue_indices != "":
+        logger.info("Stopping SMEC controller...")
+        smec_controller = SMECController()
+        cleanup_results["smec_controller"] = smec_controller.stop_smec_system()
+
+    # Check overall cleanup success
+    cleanup_results["overall_success"] = (
+        cleanup_results["client_apps"]["overall_success"]
+        and cleanup_results["server_apps"]["overall_success"]
+        and (
+            cleanup_results["smec_controller"] is None
+            or cleanup_results["smec_controller"]["overall_success"]
+        )
+    )
+
+    if cleanup_results["overall_success"]:
+        logger.info("Server and client cleanup completed successfully!")
+    else:
+        logger.warning("Server and client cleanup completed with some errors")
+
+    return cleanup_results
+
+
 def run_throughput_test(
     config: Dict[str, Any], logger: logging.Logger
 ) -> Dict[str, Any]:
@@ -574,11 +863,12 @@ def run_throughput_test(
 
 def main(config_path: str, operation: int) -> int:
     """
-    Main function to handle deployment, cleanup, and throughput test operations.
+    Main function to handle deployment, cleanup, and testing operations.
 
     Args:
         config_path: Path to the JSON configuration file
-        operation: 0 for deploy, 1 for cleanup, 2 for throughput test
+        operation: 0 for full deploy, 1 for full cleanup, 2 for deploy services only,
+                  3 for cleanup services only, 4 for throughput test
 
     Returns:
         Exit code (0 for success, 1 for failure, 2 for throughput warning)
@@ -616,7 +906,33 @@ def main(config_path: str, operation: int) -> int:
                 return 1
 
         elif operation == 2:
-            # Throughput test operation
+            # Deploy services only operation
+            logger.info("Starting server and client deployment operation...")
+            results = deploy_services_only(config, config_path, logger)
+
+            if results["overall_success"]:
+                logger.info(
+                    "Server and client deployment completed successfully!"
+                )
+                return 0
+            else:
+                logger.error("Server and client deployment failed!")
+                return 1
+
+        elif operation == 3:
+            # Cleanup services only operation
+            logger.info("Starting server and client cleanup operation...")
+            results = cleanup_services_only(config, logger)
+
+            if results["overall_success"]:
+                logger.info("Server and client cleanup completed successfully!")
+                return 0
+            else:
+                logger.error("Server and client cleanup completed with errors!")
+                return 1
+
+        elif operation == 4:
+            # Throughput test operation (moved to operation 4)
             logger.info("Starting throughput test operation...")
             results = run_throughput_test(config, logger)
 
@@ -636,7 +952,8 @@ def main(config_path: str, operation: int) -> int:
         else:
             logger.error(
                 f"Invalid operation: {operation}. Use 0 for deploy, 1 for"
-                " cleanup, 2 for throughput test."
+                " cleanup, 2 for deploy services only, 3 for cleanup services"
+                " only, 4 for throughput test."
             )
             return 1
 
@@ -649,7 +966,11 @@ if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python main.py <config_file_path> <operation>")
         print("  config_file_path: Path to JSON configuration file")
-        print("  operation: 0 for deploy, 1 for cleanup, 2 for throughput test")
+        print(
+            "  operation: 0 for full deploy, 1 for full cleanup, 2 for deploy"
+            " services only,"
+        )
+        print("             3 for cleanup services only, 4 for throughput test")
         sys.exit(1)
 
     config_path = sys.argv[1]
@@ -657,8 +978,9 @@ if __name__ == "__main__":
         operation = int(sys.argv[2])
     except ValueError:
         print(
-            "Error: operation must be an integer (0 for deploy, 1 for cleanup,"
-            " 2 for throughput test)"
+            "Error: operation must be an integer (0 for full deploy, 1 for full"
+            " cleanup, 2 for deploy services only, 3 for cleanup services only,"
+            " 4 for throughput test)"
         )
         sys.exit(1)
 

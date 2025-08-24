@@ -411,7 +411,7 @@ class AppServerExecutor:
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
             " make clean && make -j 8 &&"
             " source ~/miniconda3/etc/profile.d/conda.sh && conda activate"
-            " video-detection && ./multi_video_detection yolov8m.pt 2 10 &&"
+            " video-detection && ./multi_video_detection yolov8l.pt 2 10 &&"
             " tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
@@ -486,10 +486,11 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec &&"
-            " make clean && make -j 8 &&"
-            " source ~/miniconda3/etc/profile.d/conda.sh && conda activate"
-            " video-detection && ./multi_video_detection yolov8m.pt 2 && tail"
-            " -f /dev/null"
+            " export CONDA_PREFIX=~/miniconda3 && export"
+            " PATH=/usr/local/cuda/bin:~/miniconda3/bin:$PATH && make clean &&"
+            " make -j 8 && source ~/miniconda3/etc/profile.d/conda.sh && conda"
+            " activate video-detection && ./multi_video_detection yolov8l.pt 2"
+            " && tail -f /dev/null"
         )
 
         try:
