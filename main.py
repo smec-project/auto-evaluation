@@ -565,20 +565,20 @@ def deploy_services_only(
     }
 
     # Deploy SMEC controller if smec_ue_indices is not empty
-    if smec_ue_indices != "":
-        logger.info("Deploying SMEC controller...")
-        smec_controller = SMECController()
-        num_cpus = experiment_config.get_max_cpus()
-        deployment_results["smec_controller"] = (
-            smec_controller.start_smec_system(smec_ue_indices, num_cpus)
-        )
+    # if smec_ue_indices != "":
+    #     logger.info("Deploying SMEC controller...")
+    #     smec_controller = SMECController()
+    #     num_cpus = experiment_config.get_max_cpus()
+    #     deployment_results["smec_controller"] = (
+    #         smec_controller.start_smec_system(smec_ue_indices, num_cpus)
+    #     )
 
-        if not deployment_results["smec_controller"]["overall_success"]:
-            logger.error("SMEC controller deployment failed")
-            return deployment_results
+    #     if not deployment_results["smec_controller"]["overall_success"]:
+    #         logger.error("SMEC controller deployment failed")
+    #         return deployment_results
 
-        logger.info("Waiting 10 seconds for SMEC controller to stabilize...")
-        time.sleep(10)
+    #     logger.info("Waiting 10 seconds for SMEC controller to stabilize...")
+    #     time.sleep(10)
 
     # Deploy server applications based on config order
     logger.info("Deploying server applications...")

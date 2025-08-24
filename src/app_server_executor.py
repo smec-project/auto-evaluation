@@ -81,7 +81,7 @@ class AppServerExecutor:
 
         base_command = (
             "cd ~/edge-server-scheduler/edge-apps/file-transfer && "
-            "python main.py"
+            "python3 main.py"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
 
@@ -153,7 +153,7 @@ class AppServerExecutor:
 
         command = (
             "cd ~/edge-server-scheduler/edge-apps/file-transfer-smec && "
-            "python main.py"
+            "python3 main.py"
         )
 
         try:

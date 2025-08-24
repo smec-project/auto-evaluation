@@ -1,9 +1,9 @@
 {
-    "num_ues": 5,
+    "num_ues": 12,
     "smec_ue_indices": "1,2,3,4,5",
     "transcoding_ue_indices": "1,2",
     "video_detection_ue_indices": "3",
     "video_sr_ue_indices": "4,5",
-    "file_transfer_ue_indices": "",
+    "file_transfer_ue_indices": "6,7,8,9,10,11,12",
     "max_cpus": 24
 }

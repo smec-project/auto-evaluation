@@ -95,9 +95,7 @@ class SMECEnvSetup:
         #     "cd ~/srsRAN_Project/smec_controller && "
         #     "~/miniconda3/bin/conda run -n smec python3 main.py --log"
         # )
-        smec_command = (
-            "cd ~/srsRAN_Project/smec_controller && python3 main.py --log"
-        )
+        smec_command = "cd ~/srsRAN_Project/smec_controller && python3 main.py"
 
         try:
             result = self.host_manager.execute_on_host(
