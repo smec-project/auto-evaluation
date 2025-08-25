@@ -4,7 +4,7 @@ TUTTI Environment Setup Script
 
 - Restarts LTE service on amari host
 - Starts 5G gNB on edge0 host (apps/gnb/gnb)
-- Starts tutti_controller on edge0 host (python3 main.py --log in conda tutti env)
+- Starts tutti_controller on edge0 host (python3 tutti_controller.py in conda tutti env)
 """
 
 import logging
@@ -93,7 +93,7 @@ class TUTTIEnvSetup:
         # Use full path to conda
         # tutti_command = (
         #     "cd ~/srsRAN_Project/tutti_controller && "
-        #     "~/miniconda3/bin/conda run -n tutti python3 main.py --log"
+        #     "~/miniconda3/bin/conda run -n tutti python3 tutti_controller.py"
         # )
         tutti_command = (
             "cd ~/srsRAN_Project/tutti_controller && python3"
@@ -186,7 +186,7 @@ class TUTTIEnvSetup:
         try:
             stop_cmd = (
                 "tmux kill-session -t tutti_controller 2>/dev/null || true; "
-                "sudo pkill -f 'main.py' 2>/dev/null || true"
+                "sudo pkill -f 'tutti_controller.py' 2>/dev/null || true"
             )
             results["tutti_controller_stop"] = (
                 self.host_manager.execute_on_host(

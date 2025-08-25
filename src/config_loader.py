@@ -55,6 +55,11 @@ class ConfigLoader:
 
             self.logger.info(f"Configuration loaded from: {self.config_file}")
             self.logger.info(f"Configuration: {self.config_data}")
+
+            # Validate TUTTI and SMEC mutual exclusion
+            if not self._validate_tutti_smec_exclusion():
+                return False
+
             return True
 
         except json.JSONDecodeError as e:
@@ -63,6 +68,36 @@ class ConfigLoader:
         except Exception as e:
             self.logger.error(f"Error loading configuration file: {e}")
             return False
+
+    def _validate_tutti_smec_exclusion(self) -> bool:
+        """
+        Validate that TUTTI and SMEC are not both enabled.
+
+        Returns:
+            True if validation passes, False otherwise
+        """
+        tutti_enabled = self.config_data.get("tutti_enabled", 0) == 1
+        smec_ue_indices = self.config_data.get("smec_ue_indices", "")
+
+        if tutti_enabled and smec_ue_indices != "":
+            self.logger.error(
+                "Configuration error: TUTTI (tutti_enabled=1) and SMEC"
+                f" (smec_ue_indices='{smec_ue_indices}') cannot be enabled"
+                " simultaneously. Please enable only one of them."
+            )
+            return False
+
+        if tutti_enabled:
+            self.logger.info("TUTTI mode enabled - SMEC mode disabled")
+        elif smec_ue_indices != "":
+            self.logger.info(
+                f"SMEC mode enabled with UE indices: {smec_ue_indices} - TUTTI"
+                " mode disabled"
+            )
+        else:
+            self.logger.info("Basic mode - both TUTTI and SMEC disabled")
+
+        return True
 
     def get_transcoding_ue_indices(self) -> str:
         """
@@ -126,6 +161,15 @@ class ConfigLoader:
             Maximum number of CPUs (default: 32)
         """
         return self.config_data.get("max_cpus", 32)
+
+    def is_tutti_enabled(self) -> bool:
+        """
+        Check if TUTTI mode is enabled.
+
+        Returns:
+            True if TUTTI is enabled (tutti_enabled = 1), False otherwise
+        """
+        return self.config_data.get("tutti_enabled", 0) == 1
 
     def calculate_server_instances(self, ue_indices: str) -> int:
         """
@@ -213,6 +257,7 @@ class ConfigLoader:
             "video_detection_ue_indices": video_detection_ues,
             "video_sr_ue_indices": video_sr_ues,
             "smec_ue_indices": smec_ues,
+            "tutti_enabled": self.is_tutti_enabled(),
             "transcoding_server_instances": self.calculate_server_instances(
                 transcoding_ues
             ),
@@ -233,6 +278,7 @@ class ConfigLoader:
         self.logger.info("EXPERIMENT CONFIGURATION SUMMARY")
         self.logger.info("=" * 50)
         self.logger.info(f"Configuration file: {self.config_file}")
+        self.logger.info(f"TUTTI enabled: {config['tutti_enabled']}")
         self.logger.info(
             f"Video transcoding UE indices: {config['transcoding_ue_indices']}"
         )
@@ -277,5 +323,9 @@ def load_experiment_config(config_file: str) -> ConfigLoader:
         Exception: If configuration loading or validation fails
     """
     loader = ConfigLoader(config_file)
+
+    # Check if configuration was loaded successfully
+    if not loader.config_data:
+        raise Exception(f"Failed to load configuration from {config_file}")
 
     return loader
