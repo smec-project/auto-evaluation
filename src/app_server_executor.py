@@ -5,10 +5,16 @@ App Server Executor
 This module manages various application servers on ipu0 host:
 - File Transfer Server
 - File Transfer SMEC Server
+- File Transfer Tutti Server
 - Video Transcoding Server
 - Video Transcoding SMEC Server
+- Video Transcoding Tutti Server
+- Video Detection Server
+- Video Detection SMEC Server
+- Video Detection Tutti Server
 - Video SR Server
 - Video SR SMEC Server
+- Video SR Tutti Server
 """
 
 import logging
@@ -217,6 +223,88 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # File Transfer Tutti Server Functions
+    def start_file_transfer_tutti_server(
+        self, num_cpus: int = 32
+    ) -> Dict[str, Any]:
+        """
+        Start file transfer Tutti server on ipu0.
+
+        Args:
+            num_cpus: Number of CPUs to use for CPU affinity (default: 32)
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Starting file transfer Tutti server on ipu0...")
+
+        base_command = (
+            "cd ~/edge-server-scheduler/edge-apps/file-transfer && "
+            "python3 main.py"
+        )
+        command = self._add_cpu_affinity(base_command, num_cpus)
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0",
+                command=command,
+                session_name="file_server_tutti",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "File transfer Tutti server started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start file transfer Tutti server:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during file transfer Tutti server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "ipu0",
+            }
+
+    def stop_file_transfer_tutti_server(self) -> Dict[str, Any]:
+        """
+        Stop file transfer Tutti server on ipu0.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping file transfer Tutti server on ipu0...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t file_server_tutti 2>/dev/null || true; "
+                "sudo pkill -f 'main.py' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("File transfer Tutti server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during file transfer Tutti server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video Transcoding Server Functions
     def start_video_transcoding_server(
         self, instance_count: int = 2, num_cpus: int = 32
@@ -392,6 +480,95 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video Transcoding Tutti Server Functions
+    def start_video_transcoding_tutti_server(
+        self, instance_count: int = 2, num_cpus: int = 32
+    ) -> Dict[str, Any]:
+        """
+        Start video transcoding Tutti server on ipu0.
+
+        Args:
+            instance_count: Number of server instances to start
+            num_cpus: Number of CPUs to use for CPU affinity (default: 32)
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video transcoding Tutti server on ipu0 with"
+            f" {instance_count} instances..."
+        )
+
+        base_command = (
+            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-tutti && "
+            "make clean && make -j 8 && "
+            f"python3 run.py {instance_count} && tail -f /dev/null"
+        )
+        command = self._add_cpu_affinity(base_command, num_cpus)
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0",
+                command=command,
+                session_name="video_transcoding_tutti",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "Video transcoding Tutti server started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start video transcoding Tutti server:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video transcoding Tutti server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "ipu0",
+            }
+
+    def stop_video_transcoding_tutti_server(self) -> Dict[str, Any]:
+        """
+        Stop video transcoding Tutti server on ipu0.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video transcoding Tutti server on ipu0...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_transcoding_tutti 2>/dev/null ||"
+                " true; sudo pkill -f 'transcoder' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info(
+                "Video transcoding Tutti server stopped successfully"
+            )
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video transcoding Tutti server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video Detection Server Functions
     def start_video_detection_server(
         self, num_cpus: int = 32
@@ -554,6 +731,94 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video Detection Tutti Server Functions
+    def start_video_detection_tutti_server(
+        self, num_cpus: int = 32
+    ) -> Dict[str, Any]:
+        """
+        Start video detection Tutti server on ipu0.
+
+        Args:
+            num_cpus: Number of CPUs to use for CPU affinity (default: 32)
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Starting video detection Tutti server on ipu0...")
+
+        base_command = (
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-tutti"
+            " && make clean && make -j 8 && source"
+            " ~/miniconda3/etc/profile.d/conda.sh && conda activate"
+            " video-detection && ./multi_video_detection yolov8l.pt 2 10 &&"
+            " tail -f /dev/null"
+        )
+        command = self._add_cpu_affinity(base_command, num_cpus)
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0",
+                command=command,
+                session_name="video_detection_tutti",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "Video detection Tutti server started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start video detection Tutti server:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection Tutti server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "ipu0",
+            }
+
+    def stop_video_detection_tutti_server(self) -> Dict[str, Any]:
+        """
+        Stop video detection Tutti server on ipu0.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video detection Tutti server on ipu0...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_detection_tutti 2>/dev/null ||"
+                " true; sudo pkill -f 'multi_video_detection' 2>/dev/null ||"
+                " true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info(
+                "Video detection Tutti server stopped successfully"
+            )
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection Tutti server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video SR Server Functions
     def start_video_sr_server(self, num_cpus: int = 32) -> Dict[str, Any]:
         """
@@ -704,6 +969,85 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video SR Tutti Server Functions
+    def start_video_sr_tutti_server(self, num_cpus: int = 32) -> Dict[str, Any]:
+        """
+        Start video SR Tutti server on ipu0.
+
+        Args:
+            num_cpus: Number of CPUs to use for CPU affinity (default: 32)
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Starting video SR Tutti server on ipu0...")
+
+        base_command = (
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-tutti && "
+            "make clean && make -j 8 && source"
+            " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
+            " ./multi_video_sr 2 10 && tail -f /dev/null"
+        )
+        command = self._add_cpu_affinity(base_command, num_cpus)
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0",
+                command=command,
+                session_name="video_sr_tutti",
+            )
+
+            if result["success"]:
+                self.logger.info("Video SR Tutti server started successfully")
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    f"Failed to start video SR Tutti server: {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video SR Tutti server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "ipu0",
+            }
+
+    def stop_video_sr_tutti_server(self) -> Dict[str, Any]:
+        """
+        Stop video SR Tutti server on ipu0.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video SR Tutti server on ipu0...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_sr_tutti 2>/dev/null || true; "
+                "sudo pkill -f 'multi_video_sr' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video SR Tutti server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video SR Tutti server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Batch Operations
     def start_all_servers(
         self,
@@ -725,16 +1069,26 @@ class AppServerExecutor:
         results = {
             "file_server": self.start_file_transfer_server(num_cpus),
             "file_server_smec": self.start_file_transfer_smec_server(),
+            "file_server_tutti": self.start_file_transfer_tutti_server(
+                num_cpus
+            ),
             "video_transcoding": self.start_video_transcoding_server(
                 video_transcoding_instance_count, num_cpus
             ),
             "video_transcoding_smec": self.start_video_transcoding_smec_server(
                 video_transcoding_instance_count
             ),
+            "video_transcoding_tutti": self.start_video_transcoding_tutti_server(
+                video_transcoding_instance_count, num_cpus
+            ),
             "video_detection": self.start_video_detection_server(num_cpus),
             "video_detection_smec": self.start_video_detection_smec_server(),
+            "video_detection_tutti": self.start_video_detection_tutti_server(
+                num_cpus
+            ),
             "video_sr": self.start_video_sr_server(num_cpus),
             "video_sr_smec": self.start_video_sr_smec_server(),
+            "video_sr_tutti": self.start_video_sr_tutti_server(num_cpus),
         }
 
         # Check overall success
@@ -760,12 +1114,16 @@ class AppServerExecutor:
         results = {
             "file_server": self.stop_file_transfer_server(),
             "file_server_smec": self.stop_file_transfer_smec_server(),
+            "file_server_tutti": self.stop_file_transfer_tutti_server(),
             "video_transcoding": self.stop_video_transcoding_server(),
             "video_transcoding_smec": self.stop_video_transcoding_smec_server(),
+            "video_transcoding_tutti": self.stop_video_transcoding_tutti_server(),
             "video_detection": self.stop_video_detection_server(),
             "video_detection_smec": self.stop_video_detection_smec_server(),
+            "video_detection_tutti": self.stop_video_detection_tutti_server(),
             "video_sr": self.stop_video_sr_server(),
             "video_sr_smec": self.stop_video_sr_smec_server(),
+            "video_sr_tutti": self.stop_video_sr_tutti_server(),
         }
 
         # Check overall success
@@ -801,12 +1159,16 @@ class AppServerExecutor:
             status = {
                 "file_server": False,
                 "file_server_smec": False,
+                "file_server_tutti": False,
                 "video_transcoding": False,
                 "video_transcoding_smec": False,
+                "video_transcoding_tutti": False,
                 "video_detection": False,
                 "video_detection_smec": False,
+                "video_detection_tutti": False,
                 "video_sr": False,
                 "video_sr_smec": False,
+                "video_sr_tutti": False,
                 "tmux_output": result.get("output", ""),
             }
 
@@ -814,16 +1176,24 @@ class AppServerExecutor:
                 output = result["output"]
                 status["file_server"] = "file_server:" in output
                 status["file_server_smec"] = "file_server_smec:" in output
+                status["file_server_tutti"] = "file_server_tutti:" in output
                 status["video_transcoding"] = "video_transcoding:" in output
                 status["video_transcoding_smec"] = (
                     "video_transcoding_smec:" in output
+                )
+                status["video_transcoding_tutti"] = (
+                    "video_transcoding_tutti:" in output
                 )
                 status["video_detection"] = "video_detection:" in output
                 status["video_detection_smec"] = (
                     "video_detection_smec:" in output
                 )
+                status["video_detection_tutti"] = (
+                    "video_detection_tutti:" in output
+                )
                 status["video_sr"] = "video_sr:" in output
                 status["video_sr_smec"] = "video_sr_smec:" in output
+                status["video_sr_tutti"] = "video_sr_tutti:" in output
 
             return status
 
@@ -832,11 +1202,15 @@ class AppServerExecutor:
             return {
                 "file_server": False,
                 "file_server_smec": False,
+                "file_server_tutti": False,
                 "video_transcoding": False,
                 "video_transcoding_smec": False,
+                "video_transcoding_tutti": False,
                 "video_detection": False,
                 "video_detection_smec": False,
+                "video_detection_tutti": False,
                 "video_sr": False,
                 "video_sr_smec": False,
+                "video_sr_tutti": False,
                 "error": str(e),
             }
