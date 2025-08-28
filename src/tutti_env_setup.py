@@ -96,8 +96,7 @@ class TUTTIEnvSetup:
         #     "~/miniconda3/bin/conda run -n tutti python3 tutti_controller.py"
         # )
         tutti_command = (
-            "cd ~/srsRAN_Project/tutti_controller && python3"
-            " tutti_controller.py"
+            "cd ~/srsRAN_Project/tutti_controller && python3 main.py"
         )
 
         try:
@@ -186,7 +185,7 @@ class TUTTIEnvSetup:
         try:
             stop_cmd = (
                 "tmux kill-session -t tutti_controller 2>/dev/null || true; "
-                "sudo pkill -f 'tutti_controller.py' 2>/dev/null || true"
+                "sudo pkill -f 'main.py' 2>/dev/null || true"
             )
             results["tutti_controller_stop"] = (
                 self.host_manager.execute_on_host(
