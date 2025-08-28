@@ -62,7 +62,7 @@ class TUTTIEnvSetup:
 
         gnb_command = (
             "cd ~/srsRAN_Project/build/ && sudo apps/gnb/gnb -c"
-            " ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung.yml -c"
+            " ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung-tutti.yml -c"
             " ../configs/qam256.yml ../configs/latency-control.yml"
         )
         try:
