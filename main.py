@@ -27,6 +27,7 @@ from typing import Dict, Any, List
 from src.basic_env_setup import BasicEnvSetup
 from src.smec_env_setup import SMECEnvSetup
 from src.tutti_env_setup import TUTTIEnvSetup
+from src.arma_env_setup import ARMAEnvSetup
 from src.amari_ping_test import AmariPingTest
 from src.smec_controller import SMECController
 from src.app_server_executor import AppServerExecutor
@@ -84,6 +85,7 @@ def deploy_environment_with_retry(
     num_ues = config.get("num_ues", 8)
     smec_ue_indices = config.get("smec_ue_indices", "")
     tutti_enabled = config.get("tutti_enabled", 0) == 1
+    arma_enabled = config.get("arma_enabled", 0) == 1
 
     for attempt in range(max_retries + 1):
         if attempt > 0:
@@ -93,7 +95,13 @@ def deploy_environment_with_retry(
 
         # Deploy environment and run tests
         deployment_result = deploy_single_environment_attempt(
-            config, config_path, logger, num_ues, smec_ue_indices, tutti_enabled
+            config,
+            config_path,
+            logger,
+            num_ues,
+            smec_ue_indices,
+            tutti_enabled,
+            arma_enabled,
         )
 
         # Check if ping and iperf tests passed
@@ -117,6 +125,7 @@ def deploy_environment_with_retry(
                 logger,
                 smec_ue_indices,
                 tutti_enabled,
+                arma_enabled,
             )
         else:
             # Tests failed, cleanup and retry if attempts remaining
@@ -154,6 +163,7 @@ def deploy_single_environment_attempt(
     num_ues: int,
     smec_ue_indices: str,
     tutti_enabled: bool = False,
+    arma_enabled: bool = False,
 ) -> Dict[str, Any]:
     """
     Deploy environment and run ping/iperf tests (single attempt).
@@ -165,6 +175,7 @@ def deploy_single_environment_attempt(
         num_ues: Number of UEs
         smec_ue_indices: SMEC UE indices
         tutti_enabled: Whether TUTTI mode is enabled
+        arma_enabled: Whether ARMA mode is enabled
 
     Returns:
         Dictionary containing deployment results up to ping/iperf tests
@@ -177,7 +188,11 @@ def deploy_single_environment_attempt(
     }
 
     # Step 1: Deploy environment based on configuration
-    if tutti_enabled:
+    if arma_enabled:
+        logger.info("Deploying ARMA environment (arma_enabled = 1)")
+        env_setup = ARMAEnvSetup()
+        deployment_results["env_setup"] = env_setup.setup_complete_environment()
+    elif tutti_enabled:
         logger.info("Deploying TUTTI environment (tutti_enabled = 1)")
         env_setup = TUTTIEnvSetup()
         deployment_results["env_setup"] = env_setup.setup_complete_environment()
@@ -230,6 +245,7 @@ def complete_application_deployment(
     logger: logging.Logger,
     smec_ue_indices: str,
     tutti_enabled: bool = False,
+    arma_enabled: bool = False,
 ) -> Dict[str, Any]:
     """
     Complete the application deployment after successful ping/iperf tests.
@@ -241,6 +257,7 @@ def complete_application_deployment(
         logger: Logger instance
         smec_ue_indices: SMEC UE indices
         tutti_enabled: Whether TUTTI mode is enabled
+        arma_enabled: Whether ARMA mode is enabled
 
     Returns:
         Dictionary containing complete deployment results
@@ -289,7 +306,7 @@ def complete_application_deployment(
 
             if key == "video_detection_ue_indices":
                 logger.info("Starting video detection server...")
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["server_apps"][
                         "video_detection_tutti"
                     ] = server_executor.start_video_detection_tutti_server(
@@ -310,7 +327,7 @@ def complete_application_deployment(
                 transcoding_instances = (
                     experiment_config.get_transcoding_server_instances()
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["server_apps"][
                         "video_transcoding_tutti"
                     ] = server_executor.start_video_transcoding_tutti_server(
@@ -332,7 +349,7 @@ def complete_application_deployment(
 
             elif key == "video_sr_ue_indices":
                 logger.info("Starting video SR server...")
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["server_apps"]["video_sr_tutti"] = (
                         server_executor.start_video_sr_tutti_server(num_cpus)
                     )
@@ -348,7 +365,7 @@ def complete_application_deployment(
 
             elif key == "file_transfer_ue_indices":
                 logger.info("Starting file transfer server...")
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["server_apps"]["file_transfer_tutti"] = (
                         server_executor.start_file_transfer_tutti_server(
                             num_cpus
@@ -389,7 +406,7 @@ def complete_application_deployment(
                     "Starting video detection client with UE indices:"
                     f" {ue_indices}"
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["client_apps"][
                         "video_detection_tutti"
                     ] = client_executor.start_video_detection_tutti_client(
@@ -412,7 +429,7 @@ def complete_application_deployment(
                     "Starting video transcoding client with UE indices:"
                     f" {ue_indices}"
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["client_apps"][
                         "video_transcoding_tutti"
                     ] = client_executor.start_video_transcoding_tutti_client(
@@ -436,7 +453,7 @@ def complete_application_deployment(
                 logger.info(
                     f"Starting video SR client with UE indices: {ue_indices}"
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["client_apps"]["video_sr_tutti"] = (
                         client_executor.start_video_sr_tutti_client(ue_indices)
                     )
@@ -455,7 +472,7 @@ def complete_application_deployment(
                     "Starting file transfer client with UE indices:"
                     f" {ue_indices}"
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["client_apps"]["file_transfer_tutti"] = (
                         client_executor.start_file_transfer_tutti_client(
                             ue_indices
@@ -545,6 +562,7 @@ def cleanup_environment(
 
     smec_ue_indices = config.get("smec_ue_indices", "")
     tutti_enabled = config.get("tutti_enabled", 0) == 1
+    arma_enabled = config.get("arma_enabled", 0) == 1
 
     cleanup_results = {
         "client_apps": {},
@@ -572,7 +590,10 @@ def cleanup_environment(
 
     # Step 4: Cleanup environment
     logger.info("Cleaning up environment...")
-    if tutti_enabled:
+    if arma_enabled:
+        env_setup = ARMAEnvSetup()
+        cleanup_results["env_cleanup"] = env_setup.cleanup_environment()
+    elif tutti_enabled:
         env_setup = TUTTIEnvSetup()
         cleanup_results["env_cleanup"] = env_setup.cleanup_environment()
     elif smec_ue_indices != "":
@@ -620,6 +641,7 @@ def deploy_services_only(
     experiment_config = ConfigLoader(config_path)
     smec_ue_indices = config.get("smec_ue_indices", "")
     tutti_enabled = config.get("tutti_enabled", 0) == 1
+    arma_enabled = config.get("arma_enabled", 0) == 1
 
     deployment_results = {
         "smec_controller": None,
@@ -660,7 +682,7 @@ def deploy_services_only(
 
             if key == "video_detection_ue_indices":
                 logger.info("Starting video detection server...")
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["server_apps"][
                         "video_detection_tutti"
                     ] = server_executor.start_video_detection_tutti_server(
@@ -681,7 +703,7 @@ def deploy_services_only(
                 transcoding_instances = (
                     experiment_config.get_transcoding_server_instances()
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["server_apps"][
                         "video_transcoding_tutti"
                     ] = server_executor.start_video_transcoding_tutti_server(
@@ -703,7 +725,7 @@ def deploy_services_only(
 
             elif key == "video_sr_ue_indices":
                 logger.info("Starting video SR server...")
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["server_apps"]["video_sr_tutti"] = (
                         server_executor.start_video_sr_tutti_server(num_cpus)
                     )
@@ -719,7 +741,7 @@ def deploy_services_only(
 
             elif key == "file_transfer_ue_indices":
                 logger.info("Starting file transfer server...")
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["server_apps"]["file_transfer_tutti"] = (
                         server_executor.start_file_transfer_tutti_server(
                             num_cpus
@@ -760,7 +782,7 @@ def deploy_services_only(
                     "Starting video detection client with UE indices:"
                     f" {ue_indices}"
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["client_apps"][
                         "video_detection_tutti"
                     ] = client_executor.start_video_detection_tutti_client(
@@ -783,7 +805,7 @@ def deploy_services_only(
                     "Starting video transcoding client with UE indices:"
                     f" {ue_indices}"
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["client_apps"][
                         "video_transcoding_tutti"
                     ] = client_executor.start_video_transcoding_tutti_client(
@@ -807,7 +829,7 @@ def deploy_services_only(
                 logger.info(
                     f"Starting video SR client with UE indices: {ue_indices}"
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["client_apps"]["video_sr_tutti"] = (
                         client_executor.start_video_sr_tutti_client(ue_indices)
                     )
@@ -826,7 +848,7 @@ def deploy_services_only(
                     "Starting file transfer client with UE indices:"
                     f" {ue_indices}"
                 )
-                if tutti_enabled:
+                if arma_enabled or tutti_enabled:
                     deployment_results["client_apps"]["file_transfer_tutti"] = (
                         client_executor.start_file_transfer_tutti_client(
                             ue_indices

@@ -56,8 +56,8 @@ class ConfigLoader:
             self.logger.info(f"Configuration loaded from: {self.config_file}")
             self.logger.info(f"Configuration: {self.config_data}")
 
-            # Validate TUTTI and SMEC mutual exclusion
-            if not self._validate_tutti_smec_exclusion():
+            # Validate environment mutual exclusion
+            if not self._validate_environment_exclusion():
                 return False
 
             return True
@@ -69,33 +69,59 @@ class ConfigLoader:
             self.logger.error(f"Error loading configuration file: {e}")
             return False
 
-    def _validate_tutti_smec_exclusion(self) -> bool:
+    def _validate_environment_exclusion(self) -> bool:
         """
-        Validate that TUTTI and SMEC are not both enabled.
+        Validate that only one environment type is enabled (ARMA, TUTTI, SMEC, or baseline).
 
         Returns:
             True if validation passes, False otherwise
         """
+        arma_enabled = self.config_data.get("arma_enabled", 0) == 1
         tutti_enabled = self.config_data.get("tutti_enabled", 0) == 1
         smec_ue_indices = self.config_data.get("smec_ue_indices", "")
 
-        if tutti_enabled and smec_ue_indices != "":
+        # Count how many environments are enabled
+        enabled_count = 0
+        enabled_types = []
+
+        if arma_enabled:
+            enabled_count += 1
+            enabled_types.append("ARMA (arma_enabled=1)")
+
+        if tutti_enabled:
+            enabled_count += 1
+            enabled_types.append("TUTTI (tutti_enabled=1)")
+
+        if smec_ue_indices != "":
+            enabled_count += 1
+            enabled_types.append(f"SMEC (smec_ue_indices='{smec_ue_indices}')")
+
+        # Check for mutual exclusion
+        if enabled_count > 1:
             self.logger.error(
-                "Configuration error: TUTTI (tutti_enabled=1) and SMEC"
-                f" (smec_ue_indices='{smec_ue_indices}') cannot be enabled"
-                " simultaneously. Please enable only one of them."
+                "Configuration error: Only one environment can be enabled at a"
+                f" time. Currently enabled: {', '.join(enabled_types)}. Please"
+                " enable only one of: arma_enabled=1, tutti_enabled=1, or"
+                " smec_ue_indices."
             )
             return False
 
-        if tutti_enabled:
-            self.logger.info("TUTTI mode enabled - SMEC mode disabled")
+        # Log the selected mode
+        if arma_enabled:
+            self.logger.info(
+                "ARMA mode enabled - TUTTI and SMEC modes disabled"
+            )
+        elif tutti_enabled:
+            self.logger.info(
+                "TUTTI mode enabled - ARMA and SMEC modes disabled"
+            )
         elif smec_ue_indices != "":
             self.logger.info(
-                f"SMEC mode enabled with UE indices: {smec_ue_indices} - TUTTI"
-                " mode disabled"
+                f"SMEC mode enabled with UE indices: {smec_ue_indices} - ARMA"
+                " and TUTTI modes disabled"
             )
         else:
-            self.logger.info("Basic mode - both TUTTI and SMEC disabled")
+            self.logger.info("Basic mode - ARMA, TUTTI, and SMEC all disabled")
 
         return True
 
@@ -170,6 +196,15 @@ class ConfigLoader:
             True if TUTTI is enabled (tutti_enabled = 1), False otherwise
         """
         return self.config_data.get("tutti_enabled", 0) == 1
+
+    def is_arma_enabled(self) -> bool:
+        """
+        Check if ARMA mode is enabled.
+
+        Returns:
+            True if ARMA is enabled (arma_enabled = 1), False otherwise
+        """
+        return self.config_data.get("arma_enabled", 0) == 1
 
     def calculate_server_instances(self, ue_indices: str) -> int:
         """
