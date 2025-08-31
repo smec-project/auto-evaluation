@@ -18,21 +18,28 @@ This module manages various application clients on amari host:
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from .host_manager import HostManager
+from .config_loader import ConfigLoader
 
 
 class AppClientExecutor:
     """Executor for managing application clients on amari."""
 
-    def __init__(self, config_file: str = "hosts_config.yaml"):
+    def __init__(
+        self,
+        config_file: str = "hosts_config.yaml",
+        config_loader: Optional[ConfigLoader] = None,
+    ):
         """
         Initialize the app client executor.
 
         Args:
             config_file: Path to the host configuration file
+            config_loader: Optional ConfigLoader instance for dynamic parameter support
         """
         self.host_manager = HostManager(config_file)
+        self.config_loader = config_loader
         self.setup_logging()
 
     def setup_logging(self):
@@ -42,6 +49,17 @@ class AppClientExecutor:
             format="%(asctime)s - %(levelname)s - %(message)s",
         )
         self.logger = logging.getLogger(__name__)
+
+    def _get_dynamic_param(self) -> str:
+        """
+        Get the dynamic parameter string if dynamic mode is enabled.
+
+        Returns:
+            " -d" if dynamic is enabled, empty string otherwise
+        """
+        if self.config_loader and self.config_loader.is_dynamic_enabled():
+            return " -d"
+        return ""
 
     # File Transfer Client Functions
     def start_file_transfer_client(
@@ -61,9 +79,11 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/file-transfer && "
-            f"python3 run_amarisoft.py {ue_indices} && tail -f /dev/null"
+            "cd ~/edge-client-prober/edge-apps/file-transfer && python3"
+            f" run_amarisoft.py {ue_indices}{dynamic_param} && tail -f"
+            " /dev/null"
         )
 
         try:
@@ -140,9 +160,11 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/file-transfer-smec && "
-            f"python3 run_amarisoft.py {ue_indices} && tail -f /dev/null"
+            "cd ~/edge-client-prober/edge-apps/file-transfer-smec && python3"
+            f" run_amarisoft.py {ue_indices}{dynamic_param} && tail -f"
+            " /dev/null"
         )
 
         try:
@@ -224,9 +246,11 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/file-transfer && "
-            f"python3 run_amarisoft.py {ue_indices} && tail -f /dev/null"
+            "cd ~/edge-client-prober/edge-apps/file-transfer && python3"
+            f" run_amarisoft.py {ue_indices}{dynamic_param} && tail -f"
+            " /dev/null"
         )
 
         try:
@@ -572,12 +596,13 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-detection && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
-            f" {ue_indices} && tail -f /dev/null"
+            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
         )
 
         try:
@@ -656,11 +681,12 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-detection-smec &&"
             " make clean && make -j 8 && python3 run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
-            f" {ue_indices} && tail -f /dev/null"
+            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
         )
 
         try:
@@ -742,12 +768,13 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-detection-tutti && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
-            f" {ue_indices} && tail -f /dev/null"
+            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
         )
 
         try:
@@ -830,11 +857,12 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-sr && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
-            f" {ue_indices} && tail -f /dev/null"
+            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
         )
 
         try:
@@ -909,11 +937,12 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-sr-smec && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
-            f" {ue_indices} && tail -f /dev/null"
+            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
         )
 
         try:
@@ -992,11 +1021,12 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-sr-tutti && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
-            f" {ue_indices} && tail -f /dev/null"
+            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
         )
 
         try:

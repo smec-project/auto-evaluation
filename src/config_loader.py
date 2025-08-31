@@ -206,6 +206,15 @@ class ConfigLoader:
         """
         return self.config_data.get("arma_enabled", 0) == 1
 
+    def is_dynamic_enabled(self) -> bool:
+        """
+        Check if dynamic mode is enabled.
+
+        Returns:
+            True if dynamic is enabled (dynamic = 1), False otherwise
+        """
+        return self.config_data.get("dynamic", 0) == 1
+
     def calculate_server_instances(self, ue_indices: str) -> int:
         """
         Calculate the number of server instances based on UE indices.
@@ -293,6 +302,7 @@ class ConfigLoader:
             "video_sr_ue_indices": video_sr_ues,
             "smec_ue_indices": smec_ues,
             "tutti_enabled": self.is_tutti_enabled(),
+            "dynamic_enabled": self.is_dynamic_enabled(),
             "transcoding_server_instances": self.calculate_server_instances(
                 transcoding_ues
             ),
@@ -314,6 +324,7 @@ class ConfigLoader:
         self.logger.info("=" * 50)
         self.logger.info(f"Configuration file: {self.config_file}")
         self.logger.info(f"TUTTI enabled: {config['tutti_enabled']}")
+        self.logger.info(f"Dynamic enabled: {config['dynamic_enabled']}")
         self.logger.info(
             f"Video transcoding UE indices: {config['transcoding_ue_indices']}"
         )

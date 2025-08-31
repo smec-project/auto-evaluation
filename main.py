@@ -292,7 +292,7 @@ def complete_application_deployment(
 
     # Step 5: Deploy server applications based on config order
     logger.info("Deploying server applications...")
-    server_executor = AppServerExecutor()
+    server_executor = AppServerExecutor(config_loader=experiment_config)
     num_cpus = experiment_config.get_max_cpus()
 
     # Deploy servers based on the order they appear in JSON config file
@@ -388,7 +388,7 @@ def complete_application_deployment(
 
     # Step 6: Deploy client applications based on config order
     logger.info("Deploying client applications...")
-    client_executor = AppClientExecutor()
+    client_executor = AppClientExecutor(config_loader=experiment_config)
 
     # Deploy clients based on the order they appear in JSON config file
     client_count = 0
@@ -668,7 +668,7 @@ def deploy_services_only(
 
     # Deploy server applications based on config order
     logger.info("Deploying server applications...")
-    server_executor = AppServerExecutor()
+    server_executor = AppServerExecutor(config_loader=experiment_config)
     num_cpus = experiment_config.get_max_cpus()
 
     # Deploy servers based on the order they appear in JSON config file
@@ -764,7 +764,7 @@ def deploy_services_only(
 
     # Deploy client applications based on config order
     logger.info("Deploying client applications...")
-    client_executor = AppClientExecutor()
+    client_executor = AppClientExecutor(config_loader=experiment_config)
 
     # Deploy clients based on the order they appear in JSON config file
     client_count = 0

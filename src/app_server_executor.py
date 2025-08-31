@@ -18,21 +18,28 @@ This module manages various application servers on ipu0 host:
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from .host_manager import HostManager
+from .config_loader import ConfigLoader
 
 
 class AppServerExecutor:
     """Executor for managing application servers on ipu0."""
 
-    def __init__(self, config_file: str = "hosts_config.yaml"):
+    def __init__(
+        self,
+        config_file: str = "hosts_config.yaml",
+        config_loader: Optional[ConfigLoader] = None,
+    ):
         """
         Initialize the app server executor.
 
         Args:
             config_file: Path to the host configuration file
+            config_loader: Optional ConfigLoader instance for dynamic parameter support
         """
         self.host_manager = HostManager(config_file)
+        self.config_loader = config_loader
         self.setup_logging()
 
     def setup_logging(self):
@@ -42,6 +49,17 @@ class AppServerExecutor:
             format="%(asctime)s - %(levelname)s - %(message)s",
         )
         self.logger = logging.getLogger(__name__)
+
+    def _get_dynamic_param(self) -> str:
+        """
+        Get the dynamic parameter string if dynamic mode is enabled.
+
+        Returns:
+            " -d" if dynamic is enabled, empty string otherwise
+        """
+        if self.config_loader and self.config_loader.is_dynamic_enabled():
+            return " -d"
+        return ""
 
     def _generate_cpu_affinity(self, num_cpus: int) -> str:
         """
@@ -324,10 +342,11 @@ class AppServerExecutor:
             f" {instance_count} instances..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding && "
-            "make clean && make -j 8 && "
-            f"python3 run.py {instance_count} && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/video-transcoding && make"
+            " clean && make -j 8 && python3 run.py"
+            f" {instance_count}{dynamic_param} && tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
 
@@ -410,10 +429,11 @@ class AppServerExecutor:
             f" {instance_count} instances..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding-smec &&"
-            " make clean && make -j 8 &&"
-            f" python3 run.py {instance_count} --scheduler-drop 1 && tail -f"
+            " make clean && make -j 8 && python3 run.py"
+            f" {instance_count} --scheduler-drop 1{dynamic_param} && tail -f"
             " /dev/null"
         )
 
@@ -499,10 +519,11 @@ class AppServerExecutor:
             f" {instance_count} instances..."
         )
 
+        dynamic_param = self._get_dynamic_param()
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-tutti && "
-            "make clean && make -j 8 && "
-            f"python3 run.py {instance_count} && tail -f /dev/null"
+            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-tutti &&"
+            " make clean && make -j 8 && python3 run.py"
+            f" {instance_count}{dynamic_param} && tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
 
