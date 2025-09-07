@@ -430,11 +430,16 @@ class AppServerExecutor:
         )
 
         dynamic_param = self._get_dynamic_param()
+        ignore_drop_param = (
+            self.config_loader.get_smec_ignore_drop()
+            if self.config_loader
+            else 0
+        )
         command = (
             "cd ~/edge-server-scheduler/edge-apps/video-transcoding-smec &&"
             " make clean && make -j 8 && python3 run.py"
-            f" {instance_count} --scheduler-drop 1{dynamic_param} && tail -f"
-            " /dev/null"
+            f" {instance_count} --ignore-drop"
+            f" {ignore_drop_param}{dynamic_param} && tail -f /dev/null"
         )
 
         try:
@@ -682,13 +687,18 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video detection SMEC server on ipu0...")
 
+        ignore_drop_param = (
+            self.config_loader.get_smec_ignore_drop()
+            if self.config_loader
+            else 0
+        )
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec &&"
-            " export CONDA_PREFIX=~/miniconda3 && export"
+            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec"
+            " && export CONDA_PREFIX=~/miniconda3 && export"
             " PATH=/usr/local/cuda/bin:~/miniconda3/bin:$PATH && make clean &&"
             " make -j 8 && source ~/miniconda3/etc/profile.d/conda.sh && conda"
             " activate video-detection && ./multi_video_detection yolov8l.pt 2"
-            " && tail -f /dev/null"
+            f" {ignore_drop_param} && tail -f /dev/null"
         )
 
         try:
@@ -925,11 +935,16 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video SR SMEC server on ipu0...")
 
+        ignore_drop_param = (
+            self.config_loader.get_smec_ignore_drop()
+            if self.config_loader
+            else 0
+        )
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && "
             "make clean && make -j 8 && source"
             " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
-            " ./multi_video_sr && tail -f /dev/null"
+            f" ./multi_video_sr 2 {ignore_drop_param} && tail -f /dev/null"
         )
 
         try:

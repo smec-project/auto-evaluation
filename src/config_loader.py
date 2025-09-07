@@ -215,6 +215,15 @@ class ConfigLoader:
         """
         return self.config_data.get("dynamic", 0) == 1
 
+    def get_smec_ignore_drop(self) -> int:
+        """
+        Get SMEC ignore drop setting.
+
+        Returns:
+            smec_ignore_drop value (default: 0, only effective for SMEC mode)
+        """
+        return self.config_data.get("smec_ignore_drop", 0)
+
     def calculate_server_instances(self, ue_indices: str) -> int:
         """
         Calculate the number of server instances based on UE indices.
