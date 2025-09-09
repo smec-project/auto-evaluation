@@ -224,6 +224,24 @@ class ConfigLoader:
         """
         return self.config_data.get("smec_ignore_drop", 0)
 
+    def get_smec_rtt(self) -> int:
+        """
+        Get SMEC RTT setting.
+
+        Returns:
+            smec_rtt value (default: 0, only effective for SMEC mode)
+        """
+        return self.config_data.get("smec_rtt", 0)
+
+    def get_yolo_model(self) -> str:
+        """
+        Get YOLO model setting.
+
+        Returns:
+            yolo_model value (default: "yolov8m.pt")
+        """
+        return self.config_data.get("yolo_model", "yolov8m.pt")
+
     def calculate_server_instances(self, ue_indices: str) -> int:
         """
         Calculate the number of server instances based on UE indices.

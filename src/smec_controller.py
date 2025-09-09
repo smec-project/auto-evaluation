@@ -9,21 +9,28 @@ This module manages SMEC (Smart Multi-access Edge Computing) controller componen
 
 import logging
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from .host_manager import HostManager
+from .config_loader import ConfigLoader
 
 
 class SMECController:
     """Controller for managing SMEC controller components on ipu0 and amari."""
 
-    def __init__(self, config_file: str = "hosts_config.yaml"):
+    def __init__(
+        self,
+        config_file: str = "hosts_config.yaml",
+        config_loader: Optional[ConfigLoader] = None,
+    ):
         """
         Initialize the SMEC controller.
 
         Args:
             config_file: Path to the host configuration file
+            config_loader: Optional ConfigLoader instance for experiment settings
         """
         self.host_manager = HostManager(config_file)
+        self.config_loader = config_loader
         self.setup_logging()
 
     def setup_logging(self):
@@ -47,9 +54,15 @@ class SMECController:
         """
         self.logger.info("Starting SMEC controller server on ipu0...")
 
+        rtt_param = ""
+        if self.config_loader:
+            rtt_value = self.config_loader.get_smec_rtt()
+            if rtt_value > 0:
+                rtt_param = f" --rtt {rtt_value}"
+
         command = (
             "cd ~/edge-server-scheduler && ./server_scheduler --numa-node 1"
-            f" --max-cpus {max_cpus}"
+            f" --max-cpus {max_cpus}{rtt_param}"
         )
 
         try:

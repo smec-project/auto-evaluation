@@ -610,11 +610,16 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video detection server on ipu0...")
 
+        yolo_model = (
+            self.config_loader.get_yolo_model()
+            if self.config_loader
+            else "yolov8m.pt"
+        )
         base_command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
             " make clean && make -j 8 &&"
             " source ~/miniconda3/etc/profile.d/conda.sh && conda activate"
-            " video-detection && ./multi_video_detection yolov8l.pt 2 10 &&"
+            f" video-detection && ./multi_video_detection {yolo_model} 2 10 &&"
             " tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)
@@ -692,13 +697,18 @@ class AppServerExecutor:
             if self.config_loader
             else 0
         )
+        yolo_model = (
+            self.config_loader.get_yolo_model()
+            if self.config_loader
+            else "yolov8m.pt"
+        )
         command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec"
             " && export CONDA_PREFIX=~/miniconda3 && export"
             " PATH=/usr/local/cuda/bin:~/miniconda3/bin:$PATH && make clean &&"
             " make -j 8 && source ~/miniconda3/etc/profile.d/conda.sh && conda"
-            " activate video-detection && ./multi_video_detection yolov8l.pt 2"
-            f" {ignore_drop_param} && tail -f /dev/null"
+            " activate video-detection && ./multi_video_detection"
+            f" {yolo_model} 2 {ignore_drop_param} && tail -f /dev/null"
         )
 
         try:
@@ -777,11 +787,16 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video detection Tutti server on ipu0...")
 
+        yolo_model = (
+            self.config_loader.get_yolo_model()
+            if self.config_loader
+            else "yolov8m.pt"
+        )
         base_command = (
             "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-tutti"
             " && make clean && make -j 8 && source"
             " ~/miniconda3/etc/profile.d/conda.sh && conda activate"
-            " video-detection && ./multi_video_detection yolov8l.pt 2 10 &&"
+            f" video-detection && ./multi_video_detection {yolo_model} 2 10 &&"
             " tail -f /dev/null"
         )
         command = self._add_cpu_affinity(base_command, num_cpus)

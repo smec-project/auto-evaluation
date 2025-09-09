@@ -419,11 +419,17 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        rtt_param = ""
+        if self.config_loader:
+            rtt_value = self.config_loader.get_smec_rtt()
+            if rtt_value > 0:
+                rtt_param = f" --rtt {rtt_value}"
+
         command = (
             "cd ~/edge-client-prober/edge-apps/video-transcoding-smec &&"
             " make clean && make -j 8 && python3 run_amarisoft.py"
             " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
-            f" {ue_indices} && tail -f /dev/null"
+            f" {ue_indices}{rtt_param} && tail -f /dev/null"
         )
 
         try:
@@ -682,11 +688,17 @@ class AppClientExecutor:
         )
 
         dynamic_param = self._get_dynamic_param()
+        rtt_param = ""
+        if self.config_loader:
+            rtt_value = self.config_loader.get_smec_rtt()
+            if rtt_value > 0:
+                rtt_param = f" --rtt {rtt_value}"
+
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-detection-smec &&"
             " make clean && make -j 8 && python3 run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
-            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
+            f" {ue_indices}{rtt_param}{dynamic_param} && tail -f /dev/null"
         )
 
         try:
@@ -938,11 +950,17 @@ class AppClientExecutor:
         )
 
         dynamic_param = self._get_dynamic_param()
+        rtt_param = ""
+        if self.config_loader:
+            rtt_value = self.config_loader.get_smec_rtt()
+            if rtt_value > 0:
+                rtt_param = f" --rtt {rtt_value}"
+
         command = (
             "cd ~/edge-client-prober/edge-apps/multi-video-sr-smec && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
-            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
+            f" {ue_indices}{rtt_param}{dynamic_param} && tail -f /dev/null"
         )
 
         try:

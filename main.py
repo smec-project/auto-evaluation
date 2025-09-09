@@ -277,7 +277,7 @@ def complete_application_deployment(
     # Step 4: Deploy SMEC controller if smec_ue_indices is not empty
     if smec_ue_indices != "":
         logger.info("Deploying SMEC controller...")
-        smec_controller = SMECController()
+        smec_controller = SMECController(config_loader=experiment_config)
         num_cpus = experiment_config.get_max_cpus()
         deployment_results["smec_controller"] = (
             smec_controller.start_smec_system(smec_ue_indices, num_cpus)
@@ -653,7 +653,7 @@ def deploy_services_only(
     # Deploy SMEC controller if smec_ue_indices is not empty
     if smec_ue_indices != "":
         logger.info("Deploying SMEC controller...")
-        smec_controller = SMECController()
+        smec_controller = SMECController(config_loader=experiment_config)
         num_cpus = experiment_config.get_max_cpus()
         deployment_results["smec_controller"] = (
             smec_controller.start_smec_system(smec_ue_indices, num_cpus)
