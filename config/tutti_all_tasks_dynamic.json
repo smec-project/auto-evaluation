@@ -1,6 +1,7 @@
 {
     "num_ues": 12,
     "tutti_enabled": 1,
+    "yolo_model": "yolov8l.pt",
     "smec_ue_indices": "",
     "transcoding_ue_indices": "1,2",
     "video_detection_ue_indices": "3,4",
