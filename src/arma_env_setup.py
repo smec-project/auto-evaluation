@@ -61,7 +61,7 @@ class ARMAEnvSetup:
         self.logger.info("Starting 5G gNB on edge0 (apps/gnb/gnb)...")
 
         gnb_command = (
-            "cd ~/srsRAN_Project/build/ && sudo apps/gnb/gnb -c"
+            "cd ~/srsRAN/build/ && sudo apps/gnb/gnb -c"
             " ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung-arma.yml -c"
             " ../configs/qam256.yml ../configs/latency-control.yml"
         )
@@ -92,10 +92,10 @@ class ARMAEnvSetup:
 
         # Use full path to conda
         # arma_command = (
-        #     "cd ~/srsRAN_Project/arma_controller && "
+        #     "cd ~/srsRAN/arma_controller && "
         #     "~/miniconda3/bin/conda run -n arma python3 arma_controller.py"
         # )
-        arma_command = "cd ~/srsRAN_Project/arma_controller && python3 main.py"
+        arma_command = "cd ~/srsRAN/arma_controller && python3 main.py"
 
         try:
             result = self.host_manager.execute_on_host(

@@ -61,7 +61,7 @@ class TUTTIEnvSetup:
         self.logger.info("Starting 5G gNB on edge0 (apps/gnb/gnb)...")
 
         gnb_command = (
-            "cd ~/srsRAN_Project/build/ && sudo apps/gnb/gnb -c"
+            "cd ~/srsRAN/build/ && sudo apps/gnb/gnb -c"
             " ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung-tutti.yml -c"
             " ../configs/qam256.yml ../configs/latency-control.yml"
         )
@@ -92,12 +92,10 @@ class TUTTIEnvSetup:
 
         # Use full path to conda
         # tutti_command = (
-        #     "cd ~/srsRAN_Project/tutti_controller && "
+        #     "cd ~/srsRAN/tutti_controller && "
         #     "~/miniconda3/bin/conda run -n tutti python3 tutti_controller.py"
         # )
-        tutti_command = (
-            "cd ~/srsRAN_Project/tutti_controller && python3 main.py"
-        )
+        tutti_command = "cd ~/srsRAN/tutti_controller && python3 main.py"
 
         try:
             result = self.host_manager.execute_on_host(

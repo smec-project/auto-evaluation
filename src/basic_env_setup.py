@@ -85,7 +85,7 @@ class BasicEnvSetup:
 
         # Command to start 5G gNB with specified configuration files
         gnb_command = (
-            "cd ~/srsRAN_Project/build/ && "
+            "cd ~/srsRAN/build/ && "
             "sudo gnb -c ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung.yml "
             "-c ../configs/qam256.yml ../configs/latency-control.yml"
         )
