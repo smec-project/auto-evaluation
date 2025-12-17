@@ -60,8 +60,16 @@ class ARMAEnvSetup:
     def start_5g_gnb(self) -> Dict[str, Any]:
         self.logger.info("Starting 5G gNB on edge0 (apps/gnb/gnb)...")
 
+        # Get srsRAN path from config
+        edge0_config = self.host_manager.config.get("hosts", {}).get(
+            "edge0", {}
+        )
+        srsran_path = edge0_config.get("paths", {}).get(
+            "srsRAN_path", "~/srsRAN_Project"
+        )
+
         gnb_command = (
-            "cd ~/srsRAN/build/ && sudo apps/gnb/gnb -c"
+            f"cd {srsran_path}/build/ && sudo apps/gnb/gnb -c"
             " ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung-arma.yml -c"
             " ../configs/qam256.yml ../configs/latency-control.yml"
         )
@@ -90,12 +98,20 @@ class ARMAEnvSetup:
             "Starting ARMA controller on edge0 (conda env arma)..."
         )
 
+        # Get srsRAN path from config
+        edge0_config = self.host_manager.config.get("hosts", {}).get(
+            "edge0", {}
+        )
+        srsran_path = edge0_config.get("paths", {}).get(
+            "srsRAN_path", "~/srsRAN_Project"
+        )
+
         # Use full path to conda
         # arma_command = (
-        #     "cd ~/srsRAN/arma_controller && "
+        #     f"cd {srsran_path}/arma_controller && "
         #     "~/miniconda3/bin/conda run -n arma python3 arma_controller.py"
         # )
-        arma_command = "cd ~/srsRAN/arma_controller && python3 main.py"
+        arma_command = f"cd {srsran_path}/arma_controller && python3 main.py"
 
         try:
             result = self.host_manager.execute_on_host(
