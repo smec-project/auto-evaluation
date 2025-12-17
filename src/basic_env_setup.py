@@ -83,9 +83,17 @@ class BasicEnvSetup:
         """
         self.logger.info("Starting 5G gNB on edge0...")
 
+        # Get srsRAN path from config
+        edge0_config = self.host_manager.config.get("hosts", {}).get(
+            "edge0", {}
+        )
+        srsran_path = edge0_config.get("paths", {}).get(
+            "srsRAN_path", "~/srsRAN_Project"
+        )
+
         # Command to start 5G gNB with specified configuration files
         gnb_command = (
-            "cd ~/srsRAN/build/ && "
+            f"cd {srsran_path}/build/ && "
             "sudo gnb -c ../configs/gnb_rf_x310_tdd_n78_80mhz-63-samsung.yml "
             "-c ../configs/qam256.yml ../configs/latency-control.yml"
         )
