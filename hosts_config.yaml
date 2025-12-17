@@ -12,6 +12,9 @@ hosts:
     forward_agent: true
     timeout: 30
     description: "Amari host via proxy"
+    paths:
+      apps_path: /root/edge-applications
+      client_prober_path: /root/client-prober
     
   edge0:
     host: edge0  # This will be resolved by the proxy
@@ -22,6 +25,8 @@ hosts:
     forward_agent: false
     timeout: 30
     description: "Edge0 host via proxy"
+    paths:
+      srsRAN_path: /home/zx/srsRAN_Project
     
   ipu0:
     host: ipu0  # This will be resolved by the proxy
@@ -32,6 +37,8 @@ hosts:
     forward_agent: false
     timeout: 30
     description: "IPU0 host via proxy"
+    paths:
+      apps_path: /home/zx/edge-applications
 
 # Default settings that apply to all hosts
 defaults:
