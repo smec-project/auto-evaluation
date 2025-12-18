@@ -38,7 +38,7 @@ hosts:
     timeout: 30
     description: "Amari host via proxy"
     
-  edge0:
+  ran_server:
     host: edge0
     user: zx
     port: 22
@@ -48,7 +48,7 @@ hosts:
     timeout: 30
     description: "Edge0 host via proxy"
     
-  ipu0:
+  edge_server:
     host: ipu0
     user: zx
     port: 22
@@ -124,7 +124,7 @@ from src.host_manager import execute_on_host
 
 # Execute command directly
 result = execute_on_host(
-    host_name="edge0",
+    host_name="ran_server",
     command="uptime"
 )
 ```

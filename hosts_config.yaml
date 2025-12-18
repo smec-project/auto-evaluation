@@ -11,12 +11,12 @@ hosts:
     proxy_command: ssh zx@dex.csres.utexas.edu -W 192.168.0.15:%p
     forward_agent: true
     timeout: 30
-    description: "Amari host via proxy"
+    description: "Amarisoft UE Emulator"
     paths:
       apps_path: /root/edge-applications
       client_prober_path: /root/client-prober
     
-  edge0:
+  ran_server:
     host: edge0  # This will be resolved by the proxy
     user: zx
     port: 22
@@ -24,11 +24,11 @@ hosts:
     proxy_command: ssh zx@dex.csres.utexas.edu -W %h:%p
     forward_agent: false
     timeout: 30
-    description: "Edge0 host via proxy"
+    description: "RAN server"
     paths:
       srsRAN_path: /home/zx/srsRAN_Project
-    
-  ipu0:
+
+  edge_server:
     host: ipu0  # This will be resolved by the proxy
     user: zx
     port: 22
@@ -36,7 +36,7 @@ hosts:
     proxy_command: ssh zx@dex.csres.utexas.edu -W %h:%p
     forward_agent: false
     timeout: 30
-    description: "IPU0 host via proxy"
+    description: "Edge server to offload computing tasks"
     paths:
       apps_path: /home/zx/edge-applications
 

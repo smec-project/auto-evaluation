@@ -4,7 +4,7 @@ Basic Environment Setup Script
 
 This script sets up the basic environment for LTE and 5G testing:
 - Restarts LTE service on amari host
-- Starts 5G gNB on edge0 host
+- Starts 5G gNB on ran_server host
 """
 
 import logging
@@ -76,18 +76,18 @@ class BasicEnvSetup:
 
     def start_5g_gnb(self) -> Dict[str, Any]:
         """
-        Start 5G gNB on edge0 host.
+        Start 5G gNB on ran_server host.
 
         Returns:
             Dictionary containing execution results
         """
-        self.logger.info("Starting 5G gNB on edge0...")
+        self.logger.info("Starting 5G gNB on ran_server...")
 
         # Get srsRAN path from config
-        edge0_config = self.host_manager.config.get("hosts", {}).get(
-            "edge0", {}
+        ran_server_config = self.host_manager.config.get("hosts", {}).get(
+            "ran_server", {}
         )
-        srsran_path = edge0_config.get("paths", {}).get(
+        srsran_path = ran_server_config.get("paths", {}).get(
             "srsRAN_path", "~/srsRAN_Project"
         )
 
@@ -100,7 +100,9 @@ class BasicEnvSetup:
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge0", command=gnb_command, session_name="srsran"
+                host_name="ran_server",
+                command=gnb_command,
+                session_name="srsran",
             )
 
             if result["success"]:
@@ -118,7 +120,7 @@ class BasicEnvSetup:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge0",
+                "connection_info": "ran_server",
             }
 
     def check_lte_service_status(self) -> Dict[str, Any]:
@@ -159,17 +161,17 @@ class BasicEnvSetup:
 
     def check_5g_gnb_status(self) -> Dict[str, Any]:
         """
-        Check 5G gNB process status on edge0 host.
+        Check 5G gNB process status on ran_server host.
 
         Returns:
             Dictionary containing gNB status
         """
-        self.logger.info("Checking 5G gNB status on edge0...")
+        self.logger.info("Checking 5G gNB status on ran_server...")
 
         try:
             # Check tmux sessions first, then fallback to process check
             tmux_result = self.host_manager.execute_on_host(
-                host_name="edge0",
+                host_name="ran_server",
                 command=(
                     "tmux list-sessions 2>/dev/null | grep srsran || echo 'No"
                     " srsran session'"
@@ -179,7 +181,7 @@ class BasicEnvSetup:
 
             # Also check for gnb processes
             process_result = self.host_manager.execute_on_host(
-                host_name="edge0",
+                host_name="ran_server",
                 command=(
                     "ps aux | grep 'gnb.*configs' | grep -v grep || echo 'No"
                     " gnb process'"
@@ -192,7 +194,7 @@ class BasicEnvSetup:
                 "success": True,
                 "output": "",
                 "error": "",
-                "connection_info": "edge0",
+                "connection_info": "ran_server",
             }
 
             tmux_info = tmux_result.get("output", "").strip()
@@ -223,7 +225,7 @@ class BasicEnvSetup:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge0",
+                "connection_info": "ran_server",
             }
 
     def setup_complete_environment(self, wait_time: int = 10) -> Dict[str, Any]:
@@ -261,7 +263,7 @@ class BasicEnvSetup:
         time.sleep(wait_time)
 
         # Step 2: Start 5G gNB
-        self.logger.info("Step 2: Starting 5G gNB on edge0")
+        self.logger.info("Step 2: Starting 5G gNB on ran_server")
         results["5g_gnb_start"] = self.start_5g_gnb()
 
         if not results["5g_gnb_start"]["success"]:
@@ -311,7 +313,7 @@ class BasicEnvSetup:
         }
 
         # Stop 5G gNB
-        self.logger.info("Stopping 5G gNB on edge0...")
+        self.logger.info("Stopping 5G gNB on ran_server...")
         try:
             # Kill tmux sessions and processes
             stop_cmd = (
@@ -319,7 +321,7 @@ class BasicEnvSetup:
                 "sudo pkill -f 'gnb' 2>/dev/null || true"
             )
             results["5g_gnb_stop"] = self.host_manager.execute_on_host(
-                host_name="edge0", command=stop_cmd, background=False
+                host_name="ran_server", command=stop_cmd, background=False
             )
             # Always consider it successful since we use || true
             results["5g_gnb_stop"]["success"] = True

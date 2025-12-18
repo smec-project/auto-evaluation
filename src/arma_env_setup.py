@@ -3,8 +3,8 @@
 ARMA Environment Setup Script
 
 - Restarts LTE service on amari host
-- Starts 5G gNB on edge0 host (apps/gnb/gnb)
-- Starts arma_controller on edge0 host (python3 arma_controller.py in conda arma env)
+- Starts 5G gNB on ran_server host (apps/gnb/gnb)
+- Starts arma_controller on ran_server host (python3 arma_controller.py in conda arma env)
 """
 
 import logging
@@ -58,13 +58,13 @@ class ARMAEnvSetup:
             }
 
     def start_5g_gnb(self) -> Dict[str, Any]:
-        self.logger.info("Starting 5G gNB on edge0 (apps/gnb/gnb)...")
+        self.logger.info("Starting 5G gNB on ran_server (apps/gnb/gnb)...")
 
         # Get srsRAN path from config
-        edge0_config = self.host_manager.config.get("hosts", {}).get(
-            "edge0", {}
+        ran_server_config = self.host_manager.config.get("hosts", {}).get(
+            "ran_server", {}
         )
-        srsran_path = edge0_config.get("paths", {}).get(
+        srsran_path = ran_server_config.get("paths", {}).get(
             "srsRAN_path", "~/srsRAN_Project"
         )
 
@@ -75,7 +75,9 @@ class ARMAEnvSetup:
         )
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge0", command=gnb_command, session_name="arma_gnb"
+                host_name="ran_server",
+                command=gnb_command,
+                session_name="arma_gnb",
             )
             if result["success"]:
                 self.logger.info("5G gNB started successfully (apps/gnb/gnb)")
@@ -90,19 +92,19 @@ class ARMAEnvSetup:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge0",
+                "connection_info": "ran_server",
             }
 
     def start_arma_controller(self) -> Dict[str, Any]:
         self.logger.info(
-            "Starting ARMA controller on edge0 (conda env arma)..."
+            "Starting ARMA controller on ran_server (conda env arma)..."
         )
 
         # Get srsRAN path from config
-        edge0_config = self.host_manager.config.get("hosts", {}).get(
-            "edge0", {}
+        ran_server_config = self.host_manager.config.get("hosts", {}).get(
+            "ran_server", {}
         )
-        srsran_path = edge0_config.get("paths", {}).get(
+        srsran_path = ran_server_config.get("paths", {}).get(
             "srsRAN_path", "~/srsRAN_Project"
         )
 
@@ -115,7 +117,7 @@ class ARMAEnvSetup:
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="edge0",
+                host_name="ran_server",
                 command=arma_command,
                 session_name="arma_controller",
             )
@@ -138,7 +140,7 @@ class ARMAEnvSetup:
                 "error": str(e),
                 "pid": None,
                 "output": "",
-                "connection_info": "edge0",
+                "connection_info": "ran_server",
             }
 
     def setup_complete_environment(self, wait_time: int = 10) -> Dict[str, Any]:
@@ -160,7 +162,7 @@ class ARMAEnvSetup:
         )
         time.sleep(wait_time)
         # Step 2: Start 5G gNB
-        self.logger.info("Step 2: Starting 5G gNB on edge0 (apps/gnb/gnb)")
+        self.logger.info("Step 2: Starting 5G gNB on ran_server (apps/gnb/gnb)")
         results["5g_gnb_start"] = self.start_5g_gnb()
         if not results["5g_gnb_start"]["success"]:
             self.logger.error("5G gNB startup failed")
@@ -169,7 +171,7 @@ class ARMAEnvSetup:
         time.sleep(5)
         # Step 3: Start ARMA controller
         self.logger.info(
-            "Step 3: Starting ARMA controller on edge0 (conda env arma)"
+            "Step 3: Starting ARMA controller on ran_server (conda env arma)"
         )
         results["arma_controller_start"] = self.start_arma_controller()
         if not results["arma_controller_start"]["success"]:
@@ -195,14 +197,14 @@ class ARMAEnvSetup:
             "overall_success": False,
         }
         # Stop ARMA controller
-        self.logger.info("Stopping ARMA controller on edge0...")
+        self.logger.info("Stopping ARMA controller on ran_server...")
         try:
             stop_cmd = (
                 "tmux kill-session -t arma_controller 2>/dev/null || true; "
                 "sudo pkill -f 'main.py' 2>/dev/null || true"
             )
             results["arma_controller_stop"] = self.host_manager.execute_on_host(
-                host_name="edge0", command=stop_cmd, background=False
+                host_name="ran_server", command=stop_cmd, background=False
             )
             results["arma_controller_stop"]["success"] = True
             self.logger.info(
@@ -215,14 +217,14 @@ class ARMAEnvSetup:
                 "error": str(e),
             }
         # Stop 5G gNB
-        self.logger.info("Stopping 5G gNB on edge0...")
+        self.logger.info("Stopping 5G gNB on ran_server...")
         try:
             stop_cmd = (
                 "tmux kill-session -t arma_gnb 2>/dev/null || true; "
                 "sudo pkill -f 'gnb' 2>/dev/null || true"
             )
             results["5g_gnb_stop"] = self.host_manager.execute_on_host(
-                host_name="edge0", command=stop_cmd, background=False
+                host_name="ran_server", command=stop_cmd, background=False
             )
             results["5g_gnb_stop"]["success"] = True
             self.logger.info("5G gNB cleanup completed (tmux session killed)")
