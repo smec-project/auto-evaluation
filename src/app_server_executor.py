@@ -50,6 +50,25 @@ class AppServerExecutor:
         )
         self.logger = logging.getLogger(__name__)
 
+    def _get_app_path(self, scheduler: str, app_folder: str) -> str:
+        """
+        Get application path based on scheduler type and app folder.
+
+        Args:
+            scheduler: Scheduler type (default, smec, tutti, arma)
+            app_folder: Application folder name (file-transfer, video-od, video-sr, video-transcoding)
+
+        Returns:
+            Full path to the application server directory
+        """
+        # Get apps_path from config
+        ipu0_config = self.host_manager.config.get("hosts", {}).get("ipu0", {})
+        apps_path = ipu0_config.get("paths", {}).get(
+            "apps_path", "~/edge-applications"
+        )
+
+        return f"{apps_path}/{scheduler}/{app_folder}/server"
+
     def _get_dynamic_param(self) -> str:
         """
         Get the dynamic parameter string if dynamic mode is enabled.
@@ -103,10 +122,8 @@ class AppServerExecutor:
         """
         self.logger.info("Starting file transfer server on ipu0...")
 
-        base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/file-transfer && "
-            "python3 main.py"
-        )
+        app_path = self._get_app_path("default", "file-transfer")
+        base_command = f"cd {app_path} && python3 main.py"
         command = self._add_cpu_affinity(base_command, num_cpus)
 
         try:
@@ -175,10 +192,8 @@ class AppServerExecutor:
         """
         self.logger.info("Starting file transfer SMEC server on ipu0...")
 
-        command = (
-            "cd ~/edge-server-scheduler/edge-apps/file-transfer-smec && "
-            "python3 main.py"
-        )
+        app_path = self._get_app_path("smec", "file-transfer")
+        command = f"cd {app_path} && python3 main.py"
 
         try:
             result = self.host_manager.execute_on_host(
@@ -256,10 +271,8 @@ class AppServerExecutor:
         """
         self.logger.info("Starting file transfer Tutti server on ipu0...")
 
-        base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/file-transfer && "
-            "python3 main.py"
-        )
+        app_path = self._get_app_path("tutti", "file-transfer")
+        base_command = f"cd {app_path} && python3 main.py"
         command = self._add_cpu_affinity(base_command, num_cpus)
 
         try:
@@ -323,6 +336,86 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # File Transfer ARMA Server Functions
+    def start_file_transfer_arma_server(
+        self, num_cpus: int = 32
+    ) -> Dict[str, Any]:
+        """
+        Start file transfer ARMA server on ipu0.
+
+        Args:
+            num_cpus: Number of CPUs to use for CPU affinity (default: 32)
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Starting file transfer ARMA server on ipu0...")
+
+        app_path = self._get_app_path("arma", "file-transfer")
+        base_command = f"cd {app_path} && python3 main.py"
+        command = self._add_cpu_affinity(base_command, num_cpus)
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0",
+                command=command,
+                session_name="file_server_arma",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "File transfer ARMA server started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start file transfer ARMA server:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during file transfer ARMA server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "ipu0",
+            }
+
+    def stop_file_transfer_arma_server(self) -> Dict[str, Any]:
+        """
+        Stop file transfer ARMA server on ipu0.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping file transfer ARMA server on ipu0...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t file_server_arma 2>/dev/null || true; "
+                "sudo pkill -f 'main.py' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("File transfer ARMA server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during file transfer ARMA server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video Transcoding Server Functions
     def start_video_transcoding_server(
         self, instance_count: int = 2, num_cpus: int = 32
@@ -342,9 +435,10 @@ class AppServerExecutor:
             f" {instance_count} instances..."
         )
 
+        app_path = self._get_app_path("default", "video-transcoding")
         dynamic_param = self._get_dynamic_param()
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding && make"
+            f"cd {app_path} && make"
             " clean && make -j 8 && python3 run.py"
             f" {instance_count}{dynamic_param} && tail -f /dev/null"
         )
@@ -430,13 +524,14 @@ class AppServerExecutor:
         )
 
         dynamic_param = self._get_dynamic_param()
+        app_path = self._get_app_path("smec", "video-transcoding")
         ignore_drop_param = (
             self.config_loader.get_smec_ignore_drop()
             if self.config_loader
             else 0
         )
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-smec &&"
+            f"cd {app_path} &&"
             " make clean && make -j 8 && python3 run.py"
             f" {instance_count} --ignore-drop"
             f" {ignore_drop_param}{dynamic_param} && tail -f /dev/null"
@@ -524,9 +619,10 @@ class AppServerExecutor:
             f" {instance_count} instances..."
         )
 
+        app_path = self._get_app_path("tutti", "video-transcoding")
         dynamic_param = self._get_dynamic_param()
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/video-transcoding-tutti &&"
+            f"cd {app_path} &&"
             " make clean && make -j 8 && python3 run.py"
             f" {instance_count}{dynamic_param} && tail -f /dev/null"
         )
@@ -595,6 +691,97 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video Transcoding ARMA Server Functions
+    def start_video_transcoding_arma_server(
+        self, instance_count: int = 2, num_cpus: int = 32
+    ) -> Dict[str, Any]:
+        """
+        Start video transcoding ARMA server on ipu0.
+
+        Args:
+            instance_count: Number of server instances to start
+            num_cpus: Number of CPUs to use for CPU affinity (default: 32)
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video transcoding ARMA server on ipu0 with"
+            f" {instance_count} instances..."
+        )
+
+        app_path = self._get_app_path("arma", "video-transcoding")
+        dynamic_param = self._get_dynamic_param()
+        base_command = (
+            f"cd {app_path} &&"
+            " make clean && make -j 8 && python3 run.py"
+            f" {instance_count}{dynamic_param} && tail -f /dev/null"
+        )
+        command = self._add_cpu_affinity(base_command, num_cpus)
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0",
+                command=command,
+                session_name="video_transcoding_arma",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "Video transcoding ARMA server started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start video transcoding ARMA server:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video transcoding ARMA server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "ipu0",
+            }
+
+    def stop_video_transcoding_arma_server(self) -> Dict[str, Any]:
+        """
+        Stop video transcoding ARMA server on ipu0.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video transcoding ARMA server on ipu0...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_transcoding_arma 2>/dev/null ||"
+                " true; sudo pkill -f 'transcoder' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info(
+                "Video transcoding ARMA server stopped successfully"
+            )
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video transcoding ARMA server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video Detection Server Functions
     def start_video_detection_server(
         self, num_cpus: int = 32
@@ -610,13 +797,14 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video detection server on ipu0...")
 
+        app_path = self._get_app_path("default", "video-od")
         yolo_model = (
             self.config_loader.get_yolo_model()
             if self.config_loader
             else "yolov8m.pt"
         )
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection &&"
+            f"cd {app_path} &&"
             " make clean && make -j 8 &&"
             " source ~/miniconda3/etc/profile.d/conda.sh && conda activate"
             f" video-detection && ./multi_video_detection {yolo_model} 2 10 &&"
@@ -692,6 +880,7 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video detection SMEC server on ipu0...")
 
+        app_path = self._get_app_path("smec", "video-od")
         ignore_drop_param = (
             self.config_loader.get_smec_ignore_drop()
             if self.config_loader
@@ -703,7 +892,7 @@ class AppServerExecutor:
             else "yolov8m.pt"
         )
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-smec"
+            f"cd {app_path}"
             " && export CONDA_PREFIX=~/miniconda3 && export"
             " PATH=/usr/local/cuda/bin:~/miniconda3/bin:$PATH && make clean &&"
             " make -j 8 && source ~/miniconda3/etc/profile.d/conda.sh && conda"
@@ -787,13 +976,14 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video detection Tutti server on ipu0...")
 
+        app_path = self._get_app_path("tutti", "video-od")
         yolo_model = (
             self.config_loader.get_yolo_model()
             if self.config_loader
             else "yolov8m.pt"
         )
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-detection-tutti"
+            f"cd {app_path}"
             " && make clean && make -j 8 && source"
             " ~/miniconda3/etc/profile.d/conda.sh && conda activate"
             f" video-detection && ./multi_video_detection {yolo_model} 2 10 &&"
@@ -865,6 +1055,98 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video Detection ARMA Server Functions
+    def start_video_detection_arma_server(
+        self, num_cpus: int = 32
+    ) -> Dict[str, Any]:
+        """
+        Start video detection ARMA server on ipu0.
+
+        Args:
+            num_cpus: Number of CPUs to use for CPU affinity (default: 32)
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Starting video detection ARMA server on ipu0...")
+
+        app_path = self._get_app_path("arma", "video-od")
+        yolo_model = (
+            self.config_loader.get_yolo_model()
+            if self.config_loader
+            else "yolov8m.pt"
+        )
+        base_command = (
+            f"cd {app_path}"
+            " && make clean && make -j 8 && source"
+            " ~/miniconda3/etc/profile.d/conda.sh && conda activate"
+            f" video-detection && ./multi_video_detection {yolo_model} 2 10 &&"
+            " tail -f /dev/null"
+        )
+        command = self._add_cpu_affinity(base_command, num_cpus)
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0",
+                command=command,
+                session_name="video_detection_arma",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "Video detection ARMA server started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start video detection ARMA server:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection ARMA server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "ipu0",
+            }
+
+    def stop_video_detection_arma_server(self) -> Dict[str, Any]:
+        """
+        Stop video detection ARMA server on ipu0.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video detection ARMA server on ipu0...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_detection_arma 2>/dev/null ||"
+                " true; sudo pkill -f 'multi_video_detection' 2>/dev/null ||"
+                " true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video detection ARMA server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection ARMA server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video SR Server Functions
     def start_video_sr_server(self, num_cpus: int = 32) -> Dict[str, Any]:
         """
@@ -878,8 +1160,9 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video SR server on ipu0...")
 
+        app_path = self._get_app_path("default", "video-sr")
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && source"
             " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
             " ./multi_video_sr 2 10 && tail -f /dev/null"
@@ -950,13 +1233,14 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video SR SMEC server on ipu0...")
 
+        app_path = self._get_app_path("smec", "video-sr")
         ignore_drop_param = (
             self.config_loader.get_smec_ignore_drop()
             if self.config_loader
             else 0
         )
         command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-smec && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && source"
             " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
             f" ./multi_video_sr 2 {ignore_drop_param} && tail -f /dev/null"
@@ -1033,8 +1317,9 @@ class AppServerExecutor:
         """
         self.logger.info("Starting video SR Tutti server on ipu0...")
 
+        app_path = self._get_app_path("tutti", "video-sr")
         base_command = (
-            "cd ~/edge-server-scheduler/edge-apps/multi-video-sr-tutti && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && source"
             " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
             " ./multi_video_sr 2 10 && tail -f /dev/null"
@@ -1099,6 +1384,86 @@ class AppServerExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video SR ARMA Server Functions
+    def start_video_sr_arma_server(self, num_cpus: int = 32) -> Dict[str, Any]:
+        """
+        Start video SR ARMA server on ipu0.
+
+        Args:
+            num_cpus: Number of CPUs to use for CPU affinity (default: 32)
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Starting video SR ARMA server on ipu0...")
+
+        app_path = self._get_app_path("arma", "video-sr")
+        base_command = (
+            f"cd {app_path} && "
+            "make clean && make -j 8 && source"
+            " ~/miniconda3/etc/profile.d/conda.sh && conda activate video-sr &&"
+            " ./multi_video_sr 2 10 && tail -f /dev/null"
+        )
+        command = self._add_cpu_affinity(base_command, num_cpus)
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0",
+                command=command,
+                session_name="video_sr_arma",
+            )
+
+            if result["success"]:
+                self.logger.info("Video SR ARMA server started successfully")
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    f"Failed to start video SR ARMA server: {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video SR ARMA server startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "ipu0",
+            }
+
+    def stop_video_sr_arma_server(self) -> Dict[str, Any]:
+        """
+        Stop video SR ARMA server on ipu0.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video SR ARMA server on ipu0...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_sr_arma 2>/dev/null || true; "
+                "sudo pkill -f 'multi_video_sr' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="ipu0", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video SR ARMA server stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video SR ARMA server cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Batch Operations
     def start_all_servers(
         self,
@@ -1123,6 +1488,7 @@ class AppServerExecutor:
             "file_server_tutti": self.start_file_transfer_tutti_server(
                 num_cpus
             ),
+            "file_server_arma": self.start_file_transfer_arma_server(num_cpus),
             "video_transcoding": self.start_video_transcoding_server(
                 video_transcoding_instance_count, num_cpus
             ),
@@ -1132,14 +1498,21 @@ class AppServerExecutor:
             "video_transcoding_tutti": self.start_video_transcoding_tutti_server(
                 video_transcoding_instance_count, num_cpus
             ),
+            "video_transcoding_arma": self.start_video_transcoding_arma_server(
+                video_transcoding_instance_count, num_cpus
+            ),
             "video_detection": self.start_video_detection_server(num_cpus),
             "video_detection_smec": self.start_video_detection_smec_server(),
             "video_detection_tutti": self.start_video_detection_tutti_server(
                 num_cpus
             ),
+            "video_detection_arma": self.start_video_detection_arma_server(
+                num_cpus
+            ),
             "video_sr": self.start_video_sr_server(num_cpus),
             "video_sr_smec": self.start_video_sr_smec_server(),
             "video_sr_tutti": self.start_video_sr_tutti_server(num_cpus),
+            "video_sr_arma": self.start_video_sr_arma_server(num_cpus),
         }
 
         # Check overall success
@@ -1166,15 +1539,19 @@ class AppServerExecutor:
             "file_server": self.stop_file_transfer_server(),
             "file_server_smec": self.stop_file_transfer_smec_server(),
             "file_server_tutti": self.stop_file_transfer_tutti_server(),
+            "file_server_arma": self.stop_file_transfer_arma_server(),
             "video_transcoding": self.stop_video_transcoding_server(),
             "video_transcoding_smec": self.stop_video_transcoding_smec_server(),
             "video_transcoding_tutti": self.stop_video_transcoding_tutti_server(),
+            "video_transcoding_arma": self.stop_video_transcoding_arma_server(),
             "video_detection": self.stop_video_detection_server(),
             "video_detection_smec": self.stop_video_detection_smec_server(),
             "video_detection_tutti": self.stop_video_detection_tutti_server(),
+            "video_detection_arma": self.stop_video_detection_arma_server(),
             "video_sr": self.stop_video_sr_server(),
             "video_sr_smec": self.stop_video_sr_smec_server(),
             "video_sr_tutti": self.stop_video_sr_tutti_server(),
+            "video_sr_arma": self.stop_video_sr_arma_server(),
         }
 
         # Check overall success
@@ -1211,15 +1588,19 @@ class AppServerExecutor:
                 "file_server": False,
                 "file_server_smec": False,
                 "file_server_tutti": False,
+                "file_server_arma": False,
                 "video_transcoding": False,
                 "video_transcoding_smec": False,
                 "video_transcoding_tutti": False,
+                "video_transcoding_arma": False,
                 "video_detection": False,
                 "video_detection_smec": False,
                 "video_detection_tutti": False,
+                "video_detection_arma": False,
                 "video_sr": False,
                 "video_sr_smec": False,
                 "video_sr_tutti": False,
+                "video_sr_arma": False,
                 "tmux_output": result.get("output", ""),
             }
 
@@ -1228,12 +1609,16 @@ class AppServerExecutor:
                 status["file_server"] = "file_server:" in output
                 status["file_server_smec"] = "file_server_smec:" in output
                 status["file_server_tutti"] = "file_server_tutti:" in output
+                status["file_server_arma"] = "file_server_arma:" in output
                 status["video_transcoding"] = "video_transcoding:" in output
                 status["video_transcoding_smec"] = (
                     "video_transcoding_smec:" in output
                 )
                 status["video_transcoding_tutti"] = (
                     "video_transcoding_tutti:" in output
+                )
+                status["video_transcoding_arma"] = (
+                    "video_transcoding_arma:" in output
                 )
                 status["video_detection"] = "video_detection:" in output
                 status["video_detection_smec"] = (
@@ -1242,9 +1627,13 @@ class AppServerExecutor:
                 status["video_detection_tutti"] = (
                     "video_detection_tutti:" in output
                 )
+                status["video_detection_arma"] = (
+                    "video_detection_arma:" in output
+                )
                 status["video_sr"] = "video_sr:" in output
                 status["video_sr_smec"] = "video_sr_smec:" in output
                 status["video_sr_tutti"] = "video_sr_tutti:" in output
+                status["video_sr_arma"] = "video_sr_arma:" in output
 
             return status
 
@@ -1254,14 +1643,18 @@ class AppServerExecutor:
                 "file_server": False,
                 "file_server_smec": False,
                 "file_server_tutti": False,
+                "file_server_arma": False,
                 "video_transcoding": False,
                 "video_transcoding_smec": False,
                 "video_transcoding_tutti": False,
+                "video_transcoding_arma": False,
                 "video_detection": False,
                 "video_detection_smec": False,
                 "video_detection_tutti": False,
+                "video_detection_arma": False,
                 "video_sr": False,
                 "video_sr_smec": False,
                 "video_sr_tutti": False,
+                "video_sr_arma": False,
                 "error": str(e),
             }
