@@ -108,8 +108,11 @@ def deploy_environment_with_retry(
         ping_passed = deployment_result.get("ping_test", {}).get(
             "health_report", {}
         ).get("health_status") in ["EXCELLENT", "GOOD"]
-        iperf_passed = deployment_result.get("iperf_test", {}).get(
-            "success", False
+
+        # Check iperf test: must succeed AND have bandwidth >= 75 Mbits/sec
+        iperf_test = deployment_result.get("iperf_test", {})
+        iperf_passed = iperf_test.get("success", False) and not iperf_test.get(
+            "bandwidth_warning", False
         )
 
         if ping_passed and iperf_passed:
@@ -131,9 +134,19 @@ def deploy_environment_with_retry(
             # Tests failed, cleanup and retry if attempts remaining
             test_failures = []
             if not ping_passed:
-                test_failures.append("ping")
+                test_failures.append("ping test")
             if not iperf_passed:
-                test_failures.append("iperf")
+                # Provide more detailed iperf failure reason
+                if not iperf_test.get("success", False):
+                    test_failures.append("iperf test (command failed)")
+                elif iperf_test.get("bandwidth_warning", False):
+                    avg_bw = iperf_test.get("parsed_results", {}).get(
+                        "average_bandwidth_numeric", "unknown"
+                    )
+                    test_failures.append(
+                        f"iperf test (bandwidth {avg_bw} Mbits/sec < 75"
+                        " threshold)"
+                    )
 
             logger.error(f"✗ Tests failed: {', '.join(test_failures)}")
 
