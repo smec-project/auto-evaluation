@@ -50,6 +50,27 @@ class AppClientExecutor:
         )
         self.logger = logging.getLogger(__name__)
 
+    def _get_app_path(self, scheduler: str, app_folder: str) -> str:
+        """
+        Get application path based on scheduler type and app folder.
+
+        Args:
+            scheduler: Scheduler type (default, smec, tutti, arma)
+            app_folder: Application folder name (file-transfer, video-od, video-sr, video-transcoding)
+
+        Returns:
+            Full path to the application client directory
+        """
+        # Get apps_path from config
+        amari_config = self.host_manager.config.get("hosts", {}).get(
+            "amari", {}
+        )
+        apps_path = amari_config.get("paths", {}).get(
+            "apps_path", "~/edge-applications"
+        )
+
+        return f"{apps_path}/{scheduler}/{app_folder}/client"
+
     def _get_dynamic_param(self) -> str:
         """
         Get the dynamic parameter string if dynamic mode is enabled.
@@ -79,9 +100,10 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("default", "file-transfer")
         dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/file-transfer && python3"
+            f"cd {app_path} && python3"
             f" run_amarisoft.py {ue_indices}{dynamic_param} && tail -f"
             " /dev/null"
         )
@@ -160,9 +182,10 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("smec", "file-transfer")
         dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/file-transfer-smec && python3"
+            f"cd {app_path} && python3"
             f" run_amarisoft.py {ue_indices}{dynamic_param} && tail -f"
             " /dev/null"
         )
@@ -246,9 +269,10 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("tutti", "file-transfer")
         dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/file-transfer && python3"
+            f"cd {app_path} && python3"
             f" run_amarisoft.py {ue_indices}{dynamic_param} && tail -f"
             " /dev/null"
         )
@@ -314,6 +338,93 @@ class AppClientExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # File Transfer ARMA Client Functions
+    def start_file_transfer_arma_client(
+        self, ue_indices: str = "5,6,7,8"
+    ) -> Dict[str, Any]:
+        """
+        Start file transfer ARMA client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting file transfer ARMA client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
+
+        app_path = self._get_app_path("arma", "file-transfer")
+        dynamic_param = self._get_dynamic_param()
+        command = (
+            f"cd {app_path} && python3"
+            f" run_amarisoft.py {ue_indices}{dynamic_param} && tail -f"
+            " /dev/null"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="amari",
+                command=command,
+                session_name="file_transfer_arma",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "File transfer ARMA client started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start file transfer ARMA client:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during file transfer ARMA client startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "amari",
+            }
+
+    def stop_file_transfer_arma_client(self) -> Dict[str, Any]:
+        """
+        Stop file transfer ARMA client on amari.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping file transfer ARMA client on amari...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t file_transfer_arma 2>/dev/null || true; "
+                "sudo pkill -f 'main.py' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="amari", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("File transfer ARMA client stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during file transfer ARMA client cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video Transcoding Client Functions
     def start_video_transcoding_client(
         self, ue_indices: str = "1,2"
@@ -332,8 +443,9 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("default", "video-transcoding")
         command = (
-            "cd ~/edge-client-prober/edge-apps/video-transcoding && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py"
             " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
@@ -419,6 +531,7 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("smec", "video-transcoding")
         rtt_param = ""
         if self.config_loader:
             rtt_value = self.config_loader.get_smec_rtt()
@@ -426,7 +539,7 @@ class AppClientExecutor:
                 rtt_param = f" --rtt {rtt_value}"
 
         command = (
-            "cd ~/edge-client-prober/edge-apps/video-transcoding-smec &&"
+            f"cd {app_path} &&"
             " make clean && make -j 8 && python3 run_amarisoft.py"
             " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
             f" {ue_indices}{rtt_param} && tail -f /dev/null"
@@ -513,8 +626,9 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("tutti", "video-transcoding")
         command = (
-            "cd ~/edge-client-prober/edge-apps/video-transcoding-tutti && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py"
             " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
@@ -584,6 +698,96 @@ class AppClientExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video Transcoding ARMA Client Functions
+    def start_video_transcoding_arma_client(
+        self, ue_indices: str = "1,2"
+    ) -> Dict[str, Any]:
+        """
+        Start video transcoding ARMA client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video transcoding ARMA client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
+
+        app_path = self._get_app_path("arma", "video-transcoding")
+        command = (
+            f"cd {app_path} && "
+            "make clean && make -j 8 && python3"
+            " run_amarisoft.py"
+            " ~/video/Inter4K-255-slice16-20M-pingpong-6min.mp4"
+            f" {ue_indices} && tail -f /dev/null"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="amari",
+                command=command,
+                session_name="video_transcoding_arma",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "Video transcoding ARMA client started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start video transcoding ARMA client:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video transcoding ARMA client startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "amari",
+            }
+
+    def stop_video_transcoding_arma_client(self) -> Dict[str, Any]:
+        """
+        Stop video transcoding ARMA client on amari.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video transcoding ARMA client on amari...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_transcoding_arma 2>/dev/null ||"
+                " true; sudo pkill -f 'streamer_subscriber' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="amari", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info(
+                "Video transcoding ARMA client stopped successfully"
+            )
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video transcoding ARMA client cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video Detection Client Functions
     def start_video_detection_client(
         self, ue_indices: str = "1,2"
@@ -602,9 +806,10 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("default", "video-od")
         dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-detection && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
@@ -687,6 +892,7 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("smec", "video-od")
         dynamic_param = self._get_dynamic_param()
         rtt_param = ""
         if self.config_loader:
@@ -695,7 +901,7 @@ class AppClientExecutor:
                 rtt_param = f" --rtt {rtt_value}"
 
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-detection-smec &&"
+            f"cd {app_path} &&"
             " make clean && make -j 8 && python3 run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
             f" {ue_indices}{rtt_param}{dynamic_param} && tail -f /dev/null"
@@ -780,9 +986,10 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("tutti", "video-od")
         dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-detection-tutti && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py"
             " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
@@ -853,6 +1060,96 @@ class AppClientExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video Detection ARMA Client Functions
+    def start_video_detection_arma_client(
+        self, ue_indices: str = "1,2"
+    ) -> Dict[str, Any]:
+        """
+        Start video detection ARMA client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video detection ARMA client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
+
+        app_path = self._get_app_path("arma", "video-od")
+        dynamic_param = self._get_dynamic_param()
+        command = (
+            f"cd {app_path} && "
+            "make clean && make -j 8 && python3"
+            " run_amarisoft.py"
+            " ~/video/MOT17-02-slice16-pingpong-loop3-8Mbps-6min.mp4"
+            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="amari",
+                command=command,
+                session_name="video_detection_arma",
+            )
+
+            if result["success"]:
+                self.logger.info(
+                    "Video detection ARMA client started successfully"
+                )
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    "Failed to start video detection ARMA client:"
+                    f" {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection ARMA client startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "amari",
+            }
+
+    def stop_video_detection_arma_client(self) -> Dict[str, Any]:
+        """
+        Stop video detection ARMA client on amari.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video detection ARMA client on amari...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_detection_arma 2>/dev/null ||"
+                " true; sudo pkill -f 'video_detection_client' 2>/dev/null ||"
+                " true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="amari", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video detection ARMA client stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video detection ARMA client cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Video SR Client Functions
     def start_video_sr_client(self, ue_indices: str = "1,2") -> Dict[str, Any]:
         """
@@ -869,9 +1166,10 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("default", "video-sr")
         dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-sr && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
             f" {ue_indices}{dynamic_param} && tail -f /dev/null"
@@ -949,6 +1247,7 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("smec", "video-sr")
         dynamic_param = self._get_dynamic_param()
         rtt_param = ""
         if self.config_loader:
@@ -957,7 +1256,7 @@ class AppClientExecutor:
                 rtt_param = f" --rtt {rtt_value}"
 
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-sr-smec && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
             f" {ue_indices}{rtt_param}{dynamic_param} && tail -f /dev/null"
@@ -1039,9 +1338,10 @@ class AppClientExecutor:
             f" {ue_indices}..."
         )
 
+        app_path = self._get_app_path("tutti", "video-sr")
         dynamic_param = self._get_dynamic_param()
         command = (
-            "cd ~/edge-client-prober/edge-apps/multi-video-sr-tutti && "
+            f"cd {app_path} && "
             "make clean && make -j 8 && python3"
             " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
             f" {ue_indices}{dynamic_param} && tail -f /dev/null"
@@ -1105,6 +1405,91 @@ class AppClientExecutor:
             )
             return {"success": False, "error": str(e)}
 
+    # Video SR ARMA Client Functions
+    def start_video_sr_arma_client(
+        self, ue_indices: str = "1,2"
+    ) -> Dict[str, Any]:
+        """
+        Start video SR ARMA client on amari.
+
+        Args:
+            ue_indices: Comma-separated UE indices (e.g., "1,2,3,4")
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info(
+            "Starting video SR ARMA client on amari with UE indices:"
+            f" {ue_indices}..."
+        )
+
+        app_path = self._get_app_path("arma", "video-sr")
+        dynamic_param = self._get_dynamic_param()
+        command = (
+            f"cd {app_path} && "
+            "make clean && make -j 8 && python3"
+            " run_amarisoft.py ~/video/201_320x180_30fps_qp22_6min.mp4"
+            f" {ue_indices}{dynamic_param} && tail -f /dev/null"
+        )
+
+        try:
+            result = self.host_manager.execute_on_host(
+                host_name="amari",
+                command=command,
+                session_name="video_sr_arma",
+            )
+
+            if result["success"]:
+                self.logger.info("Video SR ARMA client started successfully")
+                self.logger.info(
+                    f"Session name: {result.get('session_name', 'N/A')}"
+                )
+            else:
+                self.logger.error(
+                    f"Failed to start video SR ARMA client: {result['error']}"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video SR ARMA client startup: {e}"
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "pid": None,
+                "output": "",
+                "connection_info": "amari",
+            }
+
+    def stop_video_sr_arma_client(self) -> Dict[str, Any]:
+        """
+        Stop video SR ARMA client on amari.
+
+        Returns:
+            Dictionary containing execution results
+        """
+        self.logger.info("Stopping video SR ARMA client on amari...")
+
+        try:
+            stop_cmd = (
+                "tmux kill-session -t video_sr_arma 2>/dev/null || true; "
+                "sudo pkill -f 'video_sr_client' 2>/dev/null || true"
+            )
+            result = self.host_manager.execute_on_host(
+                host_name="amari", command=stop_cmd, background=False
+            )
+            result["success"] = True
+            self.logger.info("Video SR ARMA client stopped successfully")
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Exception during video SR ARMA client cleanup: {e}"
+            )
+            return {"success": False, "error": str(e)}
+
     # Batch Operations
     def start_all_clients(
         self,
@@ -1118,6 +1503,10 @@ class AppClientExecutor:
         video_transcoding_tutti_ue_indices: str = "1,2",
         video_detection_tutti_ue_indices: str = "1,2",
         video_sr_tutti_ue_indices: str = "1,2",
+        file_transfer_arma_ue_indices: str = "5,6,7,8",
+        video_transcoding_arma_ue_indices: str = "1,2",
+        video_detection_arma_ue_indices: str = "1,2",
+        video_sr_arma_ue_indices: str = "1,2",
     ) -> Dict[str, Any]:
         """
         Start all application clients.
@@ -1133,6 +1522,10 @@ class AppClientExecutor:
             video_transcoding_tutti_ue_indices: UE indices for video transcoding Tutti clients
             video_detection_tutti_ue_indices: UE indices for video detection Tutti clients
             video_sr_tutti_ue_indices: UE indices for video SR Tutti clients
+            file_transfer_arma_ue_indices: UE indices for file transfer ARMA clients
+            video_transcoding_arma_ue_indices: UE indices for video transcoding ARMA clients
+            video_detection_arma_ue_indices: UE indices for video detection ARMA clients
+            video_sr_arma_ue_indices: UE indices for video SR ARMA clients
 
         Returns:
             Dictionary containing results for all clients
@@ -1149,6 +1542,9 @@ class AppClientExecutor:
             "file_transfer_tutti": self.start_file_transfer_tutti_client(
                 file_transfer_tutti_ue_indices
             ),
+            "file_transfer_arma": self.start_file_transfer_arma_client(
+                file_transfer_arma_ue_indices
+            ),
             "video_transcoding": self.start_video_transcoding_client(
                 video_transcoding_ue_indices
             ),
@@ -1157,6 +1553,9 @@ class AppClientExecutor:
             ),
             "video_transcoding_tutti": self.start_video_transcoding_tutti_client(
                 video_transcoding_tutti_ue_indices
+            ),
+            "video_transcoding_arma": self.start_video_transcoding_arma_client(
+                video_transcoding_arma_ue_indices
             ),
             "video_detection": self.start_video_detection_client(
                 video_detection_ue_indices
@@ -1167,12 +1566,18 @@ class AppClientExecutor:
             "video_detection_tutti": self.start_video_detection_tutti_client(
                 video_detection_tutti_ue_indices
             ),
+            "video_detection_arma": self.start_video_detection_arma_client(
+                video_detection_arma_ue_indices
+            ),
             "video_sr": self.start_video_sr_client(video_sr_ue_indices),
             "video_sr_smec": self.start_video_sr_smec_client(
                 video_sr_smec_ue_indices
             ),
             "video_sr_tutti": self.start_video_sr_tutti_client(
                 video_sr_tutti_ue_indices
+            ),
+            "video_sr_arma": self.start_video_sr_arma_client(
+                video_sr_arma_ue_indices
             ),
         }
 
@@ -1200,15 +1605,19 @@ class AppClientExecutor:
             "file_transfer": self.stop_file_transfer_client(),
             "file_transfer_smec": self.stop_file_transfer_smec_client(),
             "file_transfer_tutti": self.stop_file_transfer_tutti_client(),
+            "file_transfer_arma": self.stop_file_transfer_arma_client(),
             "video_transcoding": self.stop_video_transcoding_client(),
             "video_transcoding_smec": self.stop_video_transcoding_smec_client(),
             "video_transcoding_tutti": self.stop_video_transcoding_tutti_client(),
+            "video_transcoding_arma": self.stop_video_transcoding_arma_client(),
             "video_detection": self.stop_video_detection_client(),
             "video_detection_smec": self.stop_video_detection_smec_client(),
             "video_detection_tutti": self.stop_video_detection_tutti_client(),
+            "video_detection_arma": self.stop_video_detection_arma_client(),
             "video_sr": self.stop_video_sr_client(),
             "video_sr_smec": self.stop_video_sr_smec_client(),
             "video_sr_tutti": self.stop_video_sr_tutti_client(),
+            "video_sr_arma": self.stop_video_sr_arma_client(),
         }
 
         # Check overall success
@@ -1245,15 +1654,19 @@ class AppClientExecutor:
                 "file_transfer": False,
                 "file_transfer_smec": False,
                 "file_transfer_tutti": False,
+                "file_transfer_arma": False,
                 "video_transcoding": False,
                 "video_transcoding_smec": False,
                 "video_transcoding_tutti": False,
+                "video_transcoding_arma": False,
                 "video_detection": False,
                 "video_detection_smec": False,
                 "video_detection_tutti": False,
+                "video_detection_arma": False,
                 "video_sr": False,
                 "video_sr_smec": False,
                 "video_sr_tutti": False,
+                "video_sr_arma": False,
                 "tmux_output": result.get("output", ""),
             }
 
@@ -1262,12 +1675,16 @@ class AppClientExecutor:
                 status["file_transfer"] = "file_transfer:" in output
                 status["file_transfer_smec"] = "file_transfer_smec:" in output
                 status["file_transfer_tutti"] = "file_transfer_tutti:" in output
+                status["file_transfer_arma"] = "file_transfer_arma:" in output
                 status["video_transcoding"] = "video_transcoding:" in output
                 status["video_transcoding_smec"] = (
                     "video_transcoding_smec:" in output
                 )
                 status["video_transcoding_tutti"] = (
                     "video_transcoding_tutti:" in output
+                )
+                status["video_transcoding_arma"] = (
+                    "video_transcoding_arma:" in output
                 )
                 status["video_detection"] = "video_detection:" in output
                 status["video_detection_smec"] = (
@@ -1276,9 +1693,13 @@ class AppClientExecutor:
                 status["video_detection_tutti"] = (
                     "video_detection_tutti:" in output
                 )
+                status["video_detection_arma"] = (
+                    "video_detection_arma:" in output
+                )
                 status["video_sr"] = "video_sr:" in output
                 status["video_sr_smec"] = "video_sr_smec:" in output
                 status["video_sr_tutti"] = "video_sr_tutti:" in output
+                status["video_sr_arma"] = "video_sr_arma:" in output
 
             return status
 
@@ -1288,14 +1709,18 @@ class AppClientExecutor:
                 "file_transfer": False,
                 "file_transfer_smec": False,
                 "file_transfer_tutti": False,
+                "file_transfer_arma": False,
                 "video_transcoding": False,
                 "video_transcoding_smec": False,
                 "video_transcoding_tutti": False,
+                "video_transcoding_arma": False,
                 "video_detection": False,
                 "video_detection_smec": False,
                 "video_detection_tutti": False,
+                "video_detection_arma": False,
                 "video_sr": False,
                 "video_sr_smec": False,
                 "video_sr_tutti": False,
+                "video_sr_arma": False,
                 "error": str(e),
             }
