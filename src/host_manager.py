@@ -162,6 +162,7 @@ class HostManager:
         proxy_command = config_for_fabric.pop("proxy_command", None)
         forward_agent = config_for_fabric.pop("forward_agent", None)
         description = config_for_fabric.pop("description", None)
+        paths = config_for_fabric.pop("paths", None)
 
         if proxy_command:
             logging.info(f"Using proxy command: {proxy_command}")
