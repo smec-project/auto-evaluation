@@ -54,6 +54,14 @@ class SMECController:
         """
         self.logger.info("Starting SMEC controller server on edge_server...")
 
+        # Get edge_manager_path from config
+        edge_server_config = self.host_manager.config.get("hosts", {}).get(
+            "edge_server", {}
+        )
+        edge_manager_path = edge_server_config.get("paths", {}).get(
+            "edge_manager_path", "~/edge-manager"
+        )
+
         rtt_param = ""
         if self.config_loader:
             rtt_value = self.config_loader.get_smec_rtt()
@@ -61,8 +69,8 @@ class SMECController:
                 rtt_param = f" --rtt {rtt_value}"
 
         command = (
-            "cd ~/edge-server-scheduler && ./server_scheduler --numa-node 1"
-            f" --max-cpus {max_cpus}{rtt_param}"
+            f"cd {edge_manager_path} && make clean && make -j 8 && "
+            f"./server_scheduler --numa-node 1 --max-cpus {max_cpus}{rtt_param}"
         )
 
         try:
@@ -139,8 +147,16 @@ class SMECController:
             f" {ue_indices}..."
         )
 
+        # Get client_prober_path from config
+        amari_config = self.host_manager.config.get("hosts", {}).get(
+            "amari", {}
+        )
+        client_prober_path = amari_config.get("paths", {}).get(
+            "client_prober_path", "~/client-prober"
+        )
+
         command = (
-            f"cd ~/edge-client-prober && python run_amarisoft.py {ue_indices}"
+            f"cd {client_prober_path} && python run_amarisoft.py {ue_indices}"
         )
 
         try:

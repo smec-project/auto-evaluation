@@ -39,6 +39,7 @@ hosts:
     description: "Edge server to offload computing tasks"
     paths:
       apps_path: /home/zx/edge-applications
+      edge_manager_path: /home/zx/edge-manager
 
 # Default settings that apply to all hosts
 defaults:
