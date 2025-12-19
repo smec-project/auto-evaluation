@@ -10,6 +10,7 @@ import logging
 import sys
 from typing import Dict, Any
 
+from src.config_loader import ConfigLoader
 from src.deployment_operations import (
     deploy_environment,
     cleanup_environment,
@@ -32,16 +33,6 @@ def setup_logging():
     return logging.getLogger(__name__)
 
 
-def load_config(config_path: str) -> Dict[str, Any]:
-    """Load configuration from JSON file."""
-    try:
-        with open(config_path, "r") as f:
-            config = json.load(f)
-        return config
-    except Exception as e:
-        raise RuntimeError(f"Failed to load config from {config_path}: {e}")
-
-
 def run_experiment(setup_file: str, operation_number: int) -> int:
     """
     Run SMEC experiment with specified configuration and operation.
@@ -61,8 +52,15 @@ def run_experiment(setup_file: str, operation_number: int) -> int:
     logger = setup_logging()
 
     try:
-        # Load configuration
-        config = load_config(setup_file)
+        # Load and validate configuration using ConfigLoader
+        config_loader = ConfigLoader(setup_file)
+
+        # Check if configuration was loaded successfully
+        if not config_loader.config_data:
+            logger.error(f"Failed to load configuration from {setup_file}")
+            return 1
+
+        config = config_loader.config_data
         logger.info(f"Loaded configuration from: {setup_file}")
         logger.info(f"Configuration: {json.dumps(config, indent=2)}")
 

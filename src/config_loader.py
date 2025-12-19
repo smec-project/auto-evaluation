@@ -22,11 +22,17 @@ class ConfigLoader:
 
         Args:
             config_file: Path to the JSON configuration file
+
+        Raises:
+            RuntimeError: If configuration loading or validation fails
         """
         self.config_file = config_file
         self.config_data = {}
         self.setup_logging()
-        self.load_config()
+        if not self.load_config():
+            raise RuntimeError(
+                f"Configuration validation failed for {config_file}"
+            )
 
     def setup_logging(self):
         """Setup logging configuration."""
@@ -58,6 +64,10 @@ class ConfigLoader:
 
             # Validate environment mutual exclusion
             if not self._validate_environment_exclusion():
+                return False
+
+            # Validate SMEC disable and RTT mutual exclusion
+            if not self._validate_smec_params():
                 return False
 
             return True
@@ -104,6 +114,7 @@ class ConfigLoader:
                 " enable only one of: arma_enabled=1, tutti_enabled=1, or"
                 " smec_ue_indices."
             )
+            self.config_data = {}  # Clear config data on validation failure
             return False
 
         # Log the selected mode
@@ -122,6 +133,26 @@ class ConfigLoader:
             )
         else:
             self.logger.info("Basic mode - ARMA, TUTTI, and SMEC all disabled")
+
+        return True
+
+    def _validate_smec_params(self) -> bool:
+        """
+        Validate that smec_disable and smec_rtt are not both enabled.
+
+        Returns:
+            True if validation passes, False otherwise
+        """
+        smec_disable = self.config_data.get("smec_disable", 0)
+        smec_rtt = self.config_data.get("smec_rtt", 0)
+
+        if smec_disable == 1 and smec_rtt == 1:
+            self.logger.error(
+                "Configuration error: smec_disable and smec_rtt cannot both be "
+                "enabled (both set to 1). Please set only one of them to 1."
+            )
+            self.config_data = {}  # Clear config data on validation failure
+            return False
 
         return True
 
@@ -232,6 +263,15 @@ class ConfigLoader:
             smec_rtt value (default: 0, only effective for SMEC mode)
         """
         return self.config_data.get("smec_rtt", 0)
+
+    def get_smec_disable(self) -> int:
+        """
+        Get SMEC disable setting.
+
+        Returns:
+            smec_disable value (default: 0, only effective for SMEC mode)
+        """
+        return self.config_data.get("smec_disable", 0)
 
     def get_yolo_model(self) -> str:
         """
