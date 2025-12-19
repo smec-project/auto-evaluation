@@ -63,14 +63,20 @@ class SMECController:
         )
 
         rtt_param = ""
+        disable_param = ""
         if self.config_loader:
             rtt_value = self.config_loader.get_smec_rtt()
             if rtt_value > 0:
                 rtt_param = f" --rtt {rtt_value}"
 
+            disable_value = self.config_loader.get_smec_disable()
+            if disable_value == 1:
+                disable_param = " --disable"
+
         command = (
-            f"cd {edge_manager_path} && make clean && make -j 8 && "
-            f"./server_scheduler --numa-node 1 --max-cpus {max_cpus}{rtt_param}"
+            f"cd {edge_manager_path} && make clean && make -j 8 &&"
+            " ./server_scheduler --numa-node 1 --max-cpus"
+            f" {max_cpus}{rtt_param}{disable_param}"
         )
 
         try:
