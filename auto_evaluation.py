@@ -8,6 +8,7 @@ from src.get_results import (
     get_client_results,
 )
 from src.get_results import clean_results
+from src.figure_reproduce import generate_figure_10
 
 
 def data_mode():
@@ -309,6 +310,21 @@ def data_mode():
         print(f"Experiment failed with exit code: {exit_code}")
 
 
+def figures_mode():
+    """Handle figures mode logic - generate all paper figures"""
+    print("Running in figures mode...")
+
+    # Define base paths
+    results_base_path = "results"
+    output_dir = "figures"
+
+    # Generate Figure 10
+    print("\n=== Generating Figure 10 ===")
+    generate_figure_10(results_base_path, output_dir)
+
+    print("\nAll figures generated successfully!")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Auto Evaluation Tool")
     parser.add_argument(
@@ -316,14 +332,16 @@ def main():
         "--mode",
         type=str,
         required=True,
-        choices=["data"],
-        help="Operation mode: data",
+        choices=["data", "figures"],
+        help="Operation mode: data | figures",
     )
 
     args = parser.parse_args()
 
     if args.mode == "data":
         data_mode()
+    elif args.mode == "figures":
+        figures_mode()
 
 
 if __name__ == "__main__":
