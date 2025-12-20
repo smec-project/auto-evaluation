@@ -12,6 +12,7 @@ from src.figure_reproduce import (
     generate_figure_9,
     generate_figure_10,
     generate_figure_11,
+    generate_figure_12,
 )
 
 
@@ -333,6 +334,10 @@ def figures_mode():
     # Generate Figure 11
     print("\n=== Generating Figure 11 ===")
     generate_figure_11(results_base_path, output_dir)
+
+    # Generate Figure 12
+    print("\n=== Generating Figure 12 ===")
+    generate_figure_12(results_base_path, output_dir)
 
     print("\nAll figures generated successfully!")
 

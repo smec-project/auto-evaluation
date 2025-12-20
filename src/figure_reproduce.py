@@ -876,6 +876,8 @@ def calculate_network_latency_ar_sr(
                     # SR: Default/Tutti/ARMA at -1, SMEC at -3
                     total_column = df.iloc[:, -3] if is_smec else df.iloc[:, -1]
 
+                # Group data by stream ID first
+                stream_data = {}
                 for i in range(len(stream_column)):
                     try:
                         stream_id = int(stream_column.iloc[i])
@@ -883,14 +885,34 @@ def calculate_network_latency_ar_sr(
                         total_time = float(
                             str(total_column.iloc[i]).replace("ms", "").strip()
                         )
-                        key = (stream_id, frame_num)
-                        process_data_by_stream_frame[key] = total_time
+
+                        if stream_id not in stream_data:
+                            stream_data[stream_id] = []
+                        stream_data[stream_id].append((frame_num, total_time))
                     except (ValueError, AttributeError):
                         continue
+
+                # For each stream, skip first 100 and last 5 data points
+                for stream_id, data_list in stream_data.items():
+                    # Sort by frame number first
+                    data_list.sort(key=lambda x: x[0])
+
+                    if len(data_list) > skip_lines + skip_tail:
+                        # Skip head and tail for this stream
+                        filtered_data = data_list[skip_lines:-skip_tail]
+                        for frame_num, total_time in filtered_data:
+                            key = (stream_id, frame_num)
+                            process_data_by_stream_frame[key] = total_time
+                    else:
+                        # If not enough data, include all
+                        for frame_num, total_time in data_list:
+                            key = (stream_id, frame_num)
+                            process_data_by_stream_frame[key] = total_time
 
                 print(
                     "    Extracted"
                     f" {len(process_data_by_stream_frame)} stream-frame pairs"
+                    " (after filtering per stream)"
                 )
         except Exception as e:
             print(f"    Error reading {process_file}: {e}")
@@ -1197,4 +1219,459 @@ def generate_figure_11(results_base_path, output_dir):
     plt.savefig(output_path, bbox_inches="tight")
 
     print(f"\nFigure 11 saved as '{output_path}'")
+    plt.close()
+
+
+def read_processing_time_data(
+    client_dir, server_dir, app_type, skip_lines=100, skip_tail=5
+):
+    """
+    Read processing time data by matching client and server data
+    Only keep processing times where processing_time < e2e_latency
+
+    Args:
+        client_dir: Directory containing client latency files
+        server_dir: Directory containing server process files
+        app_type: Application type ('video-transcoding', 'video-od', 'video-sr')
+        skip_lines: Number of lines to skip from beginning (applied to client data)
+        skip_tail: Number of lines to skip from end (applied to client data)
+
+    Returns:
+        list: Processing time values (filtered)
+    """
+    all_processing_times = []
+
+    if app_type == "video-transcoding":
+        # Use existing SS matching logic from Figure 11
+        # Get client files and sort by timestamp
+        latency_files = glob.glob(os.path.join(client_dir, "latency_*.txt"))
+        latency_files_with_ts = []
+        for f in latency_files:
+            ts = extract_timestamp_from_filename(f)
+            if ts:
+                latency_files_with_ts.append((ts, f))
+        latency_files_with_ts.sort(key=lambda x: x[0])
+
+        # Get server 2560 files and sort by timestamp
+        process_files_2560 = glob.glob(
+            os.path.join(server_dir, "process_2560*_pipeline.txt")
+        )
+        process_files_with_ts = []
+        for f in process_files_2560:
+            ts = extract_timestamp_from_filename(f)
+            if ts:
+                process_files_with_ts.append((ts, f))
+        process_files_with_ts.sort(key=lambda x: x[0])
+
+        num_pairs = min(len(latency_files_with_ts), len(process_files_with_ts))
+
+        for i in range(num_pairs):
+            _, latency_file = latency_files_with_ts[i]
+            _, process_file = process_files_with_ts[i]
+
+            # Read client E2E latency data (skip head and tail)
+            client_data_by_frame = {}
+            try:
+                df = pd.read_csv(latency_file, sep=r"\s+", skiprows=1)
+                if len(df.columns) >= 2:
+                    frame_column = df.iloc[:, 0]
+                    latency_column = df.iloc[:, 1]
+
+                    frames = []
+                    latencies = []
+                    for j in range(len(frame_column)):
+                        try:
+                            frame_num = int(frame_column.iloc[j])
+                            e2e_latency = float(
+                                str(latency_column.iloc[j])
+                                .replace("ms", "")
+                                .strip()
+                            )
+                            frames.append(frame_num)
+                            latencies.append(e2e_latency)
+                        except (ValueError, AttributeError):
+                            continue
+
+                    # Skip head and tail
+                    if len(frames) > skip_lines + skip_tail:
+                        frames = frames[skip_lines:-skip_tail]
+                        latencies = latencies[skip_lines:-skip_tail]
+
+                    for frame_num, e2e_latency in zip(frames, latencies):
+                        client_data_by_frame[frame_num] = e2e_latency
+            except Exception as e:
+                print(f"    Error reading client file: {e}")
+                continue
+
+            # Read server processing time data
+            server_data_by_frame = {}
+            try:
+                df = pd.read_csv(process_file, sep=r"\s+", skiprows=1)
+                if len(df.columns) >= 5:
+                    frame_column = df.iloc[:, 0]
+                    is_smec = "smec" in process_file.lower()
+                    total_column = df.iloc[:, -2] if is_smec else df.iloc[:, -1]
+
+                    for j in range(len(frame_column)):
+                        try:
+                            frame_num = int(frame_column.iloc[j])
+                            total_time = float(
+                                str(total_column.iloc[j])
+                                .replace("ms", "")
+                                .strip()
+                            )
+                            server_data_by_frame[frame_num] = total_time
+                        except (ValueError, AttributeError):
+                            continue
+            except Exception as e:
+                print(f"    Error reading server file: {e}")
+                continue
+
+            # Match and filter: only keep processing_time < e2e_latency
+            for frame_num, e2e_latency in client_data_by_frame.items():
+                if frame_num in server_data_by_frame:
+                    processing_time = server_data_by_frame[frame_num]
+                    if processing_time < e2e_latency:
+                        all_processing_times.append(processing_time)
+
+    else:  # video-od or video-sr
+        # Use existing AR/SR matching logic from Figure 11
+        # Get client files and sort by timestamp
+        latency_files = glob.glob(os.path.join(client_dir, "latency_*.txt"))
+        latency_files_with_ts = []
+        for f in latency_files:
+            ts = extract_timestamp_from_filename(f)
+            if ts:
+                latency_files_with_ts.append((ts, f))
+        latency_files_with_ts.sort(key=lambda x: x[0])
+
+        # Map client file to stream ID
+        client_to_stream = {}
+        if len(latency_files_with_ts) >= 2:
+            client_to_stream[latency_files_with_ts[0][1]] = 0
+            client_to_stream[latency_files_with_ts[1][1]] = 1
+        elif len(latency_files_with_ts) == 1:
+            client_to_stream[latency_files_with_ts[0][1]] = 0
+
+        # Read all server process data
+        process_files = glob.glob(os.path.join(server_dir, "process_*.txt"))
+        server_data_by_stream_frame = {}
+
+        for process_file in process_files:
+            try:
+                df = pd.read_csv(process_file, sep=r"\s+", skiprows=1)
+                if len(df.columns) >= 6:
+                    stream_column = df.iloc[:, 0]
+                    frame_column = df.iloc[:, 1]
+
+                    is_smec = "smec" in process_file.lower()
+                    is_ar = "yolo" in process_file
+
+                    if is_ar:
+                        total_column = (
+                            df.iloc[:, -4] if is_smec else df.iloc[:, -2]
+                        )
+                    else:
+                        total_column = (
+                            df.iloc[:, -3] if is_smec else df.iloc[:, -1]
+                        )
+
+                    for j in range(len(stream_column)):
+                        try:
+                            stream_id = int(stream_column.iloc[j])
+                            frame_num = int(frame_column.iloc[j])
+                            total_time = float(
+                                str(total_column.iloc[j])
+                                .replace("ms", "")
+                                .strip()
+                            )
+                            key = (stream_id, frame_num)
+                            server_data_by_stream_frame[key] = total_time
+                        except (ValueError, AttributeError):
+                            continue
+            except Exception as e:
+                print(f"    Error reading {process_file}: {e}")
+
+        # Process each client file
+        for latency_file in client_to_stream.keys():
+            stream_id = client_to_stream[latency_file]
+
+            try:
+                df = pd.read_csv(latency_file, sep=r"\s+", skiprows=1)
+                if len(df.columns) >= 2:
+                    frame_column = df.iloc[:, 0]
+                    latency_column = df.iloc[:, 1]
+
+                    frames = []
+                    latencies = []
+                    for j in range(len(frame_column)):
+                        try:
+                            frame_num = int(frame_column.iloc[j])
+                            e2e_latency = float(
+                                str(latency_column.iloc[j])
+                                .replace("ms", "")
+                                .strip()
+                            )
+                            frames.append(frame_num)
+                            latencies.append(e2e_latency)
+                        except (ValueError, AttributeError):
+                            continue
+
+                    # Skip head and tail
+                    if len(frames) > skip_lines + skip_tail:
+                        frames = frames[skip_lines:-skip_tail]
+                        latencies = latencies[skip_lines:-skip_tail]
+
+                    # Match with server data and filter
+                    for frame_num, e2e_latency in zip(frames, latencies):
+                        key = (stream_id, frame_num)
+                        if key in server_data_by_stream_frame:
+                            processing_time = server_data_by_stream_frame[key]
+                            if processing_time < e2e_latency:
+                                all_processing_times.append(processing_time)
+            except Exception as e:
+                print(f"    Error reading latency file: {e}")
+
+    return all_processing_times
+
+
+def generate_figure_12(results_base_path, output_dir):
+    """
+    Generate Figure 12: Processing time CDF across applications
+
+    Args:
+        results_base_path (str): Base path to results directory
+        output_dir (str): Output directory for saving figures
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Define applications and their display names
+    applications = {
+        "video-transcoding": "SS",
+        "video-od": "AR",
+        "video-sr": "VC",
+    }
+
+    # Map scheduler directories to their names
+    scheduler_mapping = {
+        "default_all_tasks": "default",
+        "tutti_all_tasks": "tutti",
+        "smec_all_tasks": "smec",
+        "arma_all_tasks": "arma",
+    }
+
+    # Store all data for plotting
+    all_app_data = {}
+
+    # Process each application
+    for app_dir, app_name in applications.items():
+        print(f"\n=== Processing {app_name} ({app_dir}) ===")
+        all_app_data[app_name] = {}
+
+        for scheduler_dir, scheduler_name in scheduler_mapping.items():
+            client_path = os.path.join(
+                results_base_path, scheduler_dir, app_dir, "client"
+            )
+            server_path = os.path.join(
+                results_base_path, scheduler_dir, app_dir, "server"
+            )
+
+            if os.path.exists(client_path) and os.path.exists(server_path):
+                print(f"  Processing {scheduler_name}...")
+
+                processing_times = read_processing_time_data(
+                    client_path,
+                    server_path,
+                    app_dir,
+                    skip_lines=100,
+                    skip_tail=5,
+                )
+
+                if processing_times:
+                    all_app_data[app_name][scheduler_name] = processing_times
+                    print(
+                        f"    Total: {len(processing_times)} processing time"
+                        " values"
+                    )
+                    print(f"    Mean: {np.mean(processing_times):.2f} ms")
+                    print(f"    Median: {np.median(processing_times):.2f} ms")
+                    print(
+                        "    95th percentile:"
+                        f" {np.percentile(processing_times, 95):.2f} ms"
+                    )
+                else:
+                    print(f"    No processing time data found")
+            else:
+                if not os.path.exists(client_path):
+                    print(f"  Client directory not found: {client_path}")
+                if not os.path.exists(server_path):
+                    print(f"  Server directory not found: {server_path}")
+
+    # Create combined plot
+    print(f"\n=== Creating combined processing time CDF plot ===")
+
+    fig, axes = plt.subplots(1, 3, figsize=(21, 6.5), sharey=True)
+
+    # Try to use seaborn style
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    # Enhanced colors and styles for each scheduler
+    plot_configs = {
+        "default": {
+            "color": "#1f77b4",
+            "linestyle": "-",
+            "marker": "o",
+            "markevery": 200,
+        },
+        "tutti": {
+            "color": "#9467bd",
+            "linestyle": ":",
+            "marker": "v",
+            "markevery": 200,
+        },
+        "smec": {
+            "color": "#ff7f0e",
+            "linestyle": "--",
+            "marker": "s",
+            "markevery": 200,
+        },
+        "arma": {
+            "color": "#2ca02c",
+            "linestyle": "-.",
+            "marker": "^",
+            "markevery": 200,
+        },
+    }
+
+    # Legend labels
+    legend_labels = {
+        "default": "Default",
+        "tutti": "Tutti",
+        "smec": "SMEC",
+        "arma": "ARMA",
+    }
+
+    # SLO values for processing time (same as E2E)
+    slo_values = {"SS": 100, "AR": 100, "VC": 150}
+
+    # Plot for each application
+    for idx, app_name in enumerate(["SS", "AR", "VC"]):
+        ax = axes[idx]
+
+        if app_name in all_app_data:
+            # Plot each scheduler for this application
+            for scheduler in ["default", "tutti", "arma", "smec"]:
+                if scheduler in all_app_data[app_name]:
+                    processing_times = all_app_data[app_name][scheduler]
+                    sorted_data, cdf_values = calculate_cdf(processing_times)
+
+                    ax.plot(
+                        sorted_data,
+                        cdf_values,
+                        color=plot_configs[scheduler]["color"],
+                        linestyle=plot_configs[scheduler]["linestyle"],
+                        linewidth=6,
+                        label=legend_labels[scheduler],
+                        alpha=0.9,
+                        marker=plot_configs[scheduler]["marker"],
+                        markevery=plot_configs[scheduler]["markevery"],
+                        markersize=12,
+                        markerfacecolor="white",
+                        markeredgewidth=3,
+                        markeredgecolor=plot_configs[scheduler]["color"],
+                    )
+
+            # Add SLO line
+            if app_name in slo_values:
+                ax.axvline(
+                    x=slo_values[app_name],
+                    color="#d62728",
+                    linestyle=":",
+                    linewidth=8,
+                    alpha=0.8,
+                    zorder=5,
+                )
+
+        # Customize each subplot
+        ax.set_xlabel(f"{app_name}", fontsize=52, color="#333333")
+
+        # Set axis properties - LINEAR scale (not log)
+        ax.set_ylim(0, 1.05)
+        ax.set_xlim(left=0)
+
+        # Grid styling
+        ax.grid(True, alpha=0.4, linestyle="--", linewidth=0.8, color="#cccccc")
+
+        # Tick styling
+        ax.tick_params(
+            axis="both",
+            which="major",
+            labelsize=52,
+            colors="#333333",
+            width=2,
+            length=8,
+        )
+
+        # Background color
+        ax.set_facecolor("#fafafa")
+
+        # Border styling
+        for spine in ax.spines.values():
+            spine.set_linewidth(2.5)
+            spine.set_color("#333333")
+
+        # Set custom ticks
+        import matplotlib.ticker as ticker
+
+        ax.yaxis.set_major_locator(ticker.FixedLocator([0, 0.5, 1.0]))
+        ax.xaxis.set_major_locator(
+            ticker.MultipleLocator(100)
+        )  # 100ms intervals
+
+    # Set y-axis label only for the leftmost subplot
+    axes[0].set_ylabel("CDF", fontsize=52, color="#333333")
+
+    # Create a single shared legend
+    handles, labels = axes[0].get_legend_handles_labels()
+
+    # Add SLO to legend
+    slo_line = plt.Line2D(
+        [0], [0], color="#d62728", linestyle=":", linewidth=8, alpha=0.8
+    )
+    handles.append(slo_line)
+    labels.append("SLO")
+
+    # Place legend at the top center of the entire figure
+    fig.legend(
+        handles,
+        labels,
+        fontsize=47,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        bbox_to_anchor=(0.53, 1.08),
+        loc="center",
+        ncol=5,
+        framealpha=0.95,
+        edgecolor="#333333",
+        facecolor="white",
+        columnspacing=0.8,
+        handletextpad=0.3,
+    )
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Save the plot
+    output_path = os.path.join(output_dir, "figure_12.pdf")
+    plt.savefig(output_path, bbox_inches="tight")
+
+    print(f"\nFigure 12 saved as '{output_path}'")
     plt.close()
