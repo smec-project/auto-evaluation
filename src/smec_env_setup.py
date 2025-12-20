@@ -113,7 +113,9 @@ class SMECEnvSetup:
         #     f"cd {srsran_path}/smec_controller && "
         #     "~/miniconda3/bin/conda run -n smec python3 main.py --log"
         # )
-        smec_command = f"cd {srsran_path}/smec_controller && python3 main.py"
+        smec_command = (
+            f"cd {srsran_path}/smec_controller && python3 main.py --log"
+        )
 
         try:
             result = self.host_manager.execute_on_host(

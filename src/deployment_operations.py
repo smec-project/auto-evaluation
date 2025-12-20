@@ -281,7 +281,13 @@ def complete_application_deployment(
 
             if key == "video_detection_ue_indices":
                 logger.info("Starting video detection server...")
-                if arma_enabled or tutti_enabled:
+                if arma_enabled:
+                    deployment_results["server_apps"][
+                        "video_detection_arma"
+                    ] = server_executor.start_video_detection_arma_server(
+                        num_cpus
+                    )
+                elif tutti_enabled:
                     deployment_results["server_apps"][
                         "video_detection_tutti"
                     ] = server_executor.start_video_detection_tutti_server(
@@ -302,7 +308,13 @@ def complete_application_deployment(
                 transcoding_instances = (
                     experiment_config.get_transcoding_server_instances()
                 )
-                if arma_enabled or tutti_enabled:
+                if arma_enabled:
+                    deployment_results["server_apps"][
+                        "video_transcoding_arma"
+                    ] = server_executor.start_video_transcoding_arma_server(
+                        transcoding_instances, num_cpus
+                    )
+                elif tutti_enabled:
                     deployment_results["server_apps"][
                         "video_transcoding_tutti"
                     ] = server_executor.start_video_transcoding_tutti_server(
@@ -324,7 +336,11 @@ def complete_application_deployment(
 
             elif key == "video_sr_ue_indices":
                 logger.info("Starting video SR server...")
-                if arma_enabled or tutti_enabled:
+                if arma_enabled:
+                    deployment_results["server_apps"]["video_sr_arma"] = (
+                        server_executor.start_video_sr_arma_server(num_cpus)
+                    )
+                elif tutti_enabled:
                     deployment_results["server_apps"]["video_sr_tutti"] = (
                         server_executor.start_video_sr_tutti_server(num_cpus)
                     )
@@ -340,7 +356,13 @@ def complete_application_deployment(
 
             elif key == "file_transfer_ue_indices":
                 logger.info("Starting file transfer server...")
-                if arma_enabled or tutti_enabled:
+                if arma_enabled:
+                    deployment_results["server_apps"]["file_transfer_arma"] = (
+                        server_executor.start_file_transfer_arma_server(
+                            num_cpus
+                        )
+                    )
+                elif tutti_enabled:
                     deployment_results["server_apps"]["file_transfer_tutti"] = (
                         server_executor.start_file_transfer_tutti_server(
                             num_cpus
@@ -381,7 +403,13 @@ def complete_application_deployment(
                     "Starting video detection client with UE indices:"
                     f" {ue_indices}"
                 )
-                if arma_enabled or tutti_enabled:
+                if arma_enabled:
+                    deployment_results["client_apps"][
+                        "video_detection_arma"
+                    ] = client_executor.start_video_detection_arma_client(
+                        ue_indices
+                    )
+                elif tutti_enabled:
                     deployment_results["client_apps"][
                         "video_detection_tutti"
                     ] = client_executor.start_video_detection_tutti_client(
@@ -404,7 +432,13 @@ def complete_application_deployment(
                     "Starting video transcoding client with UE indices:"
                     f" {ue_indices}"
                 )
-                if arma_enabled or tutti_enabled:
+                if arma_enabled:
+                    deployment_results["client_apps"][
+                        "video_transcoding_arma"
+                    ] = client_executor.start_video_transcoding_arma_client(
+                        ue_indices
+                    )
+                elif tutti_enabled:
                     deployment_results["client_apps"][
                         "video_transcoding_tutti"
                     ] = client_executor.start_video_transcoding_tutti_client(
@@ -428,7 +462,11 @@ def complete_application_deployment(
                 logger.info(
                     f"Starting video SR client with UE indices: {ue_indices}"
                 )
-                if arma_enabled or tutti_enabled:
+                if arma_enabled:
+                    deployment_results["client_apps"]["video_sr_arma"] = (
+                        client_executor.start_video_sr_arma_client(ue_indices)
+                    )
+                elif tutti_enabled:
                     deployment_results["client_apps"]["video_sr_tutti"] = (
                         client_executor.start_video_sr_tutti_client(ue_indices)
                     )
@@ -447,7 +485,13 @@ def complete_application_deployment(
                     "Starting file transfer client with UE indices:"
                     f" {ue_indices}"
                 )
-                if arma_enabled or tutti_enabled:
+                if arma_enabled:
+                    deployment_results["client_apps"]["file_transfer_arma"] = (
+                        client_executor.start_file_transfer_arma_client(
+                            ue_indices
+                        )
+                    )
+                elif tutti_enabled:
                     deployment_results["client_apps"]["file_transfer_tutti"] = (
                         client_executor.start_file_transfer_tutti_client(
                             ue_indices
