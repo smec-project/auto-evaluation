@@ -334,3 +334,330 @@ def generate_figure_10(results_base_path, output_dir):
 
     print(f"\nFigure 10 saved as '{output_path}'")
     plt.close()
+
+
+def read_latency_data_with_slo(
+    directory_path, slo_threshold, skip_lines=100, skip_tail=5
+):
+    """
+    Read E2E latency data and calculate SLO satisfaction
+
+    Args:
+        directory_path (str): Path to the directory containing latency files
+        slo_threshold (float): SLO threshold in milliseconds
+        skip_lines (int): Number of lines to skip from the beginning of each file
+        skip_tail (int): Number of lines to skip from the end of each file
+
+    Returns:
+        tuple: (all_latencies, total_frames, satisfied_frames) for SLO analysis
+    """
+    all_latencies = []
+    total_frames = 0
+    satisfied_frames = 0
+
+    # Find all .txt files in the directory
+    file_pattern = os.path.join(directory_path, "*.txt")
+    files = glob.glob(file_pattern)
+
+    print(f"  Processing {len(files)} files in {directory_path}")
+
+    for file_path in files:
+        try:
+            # Read the file, skipping the first skip_lines lines
+            df = pd.read_csv(file_path, sep=r"\s+", skiprows=skip_lines)
+
+            # Extract frame indices and E2E latency values
+            if len(df.columns) >= 2:
+                frame_column = df.iloc[:, 0]  # Frame indices
+                latency_column = df.iloc[:, 1]  # E2E latency values
+
+                # Convert latency to numeric values
+                latency_strings = latency_column.astype(str)
+                latency_values = []
+
+                for value in latency_strings:
+                    try:
+                        # Remove 'ms' if present and convert to float
+                        numeric_value = float(value.replace("ms", "").strip())
+                        latency_values.append(numeric_value)
+                    except (ValueError, AttributeError):
+                        continue
+
+                # Skip the last skip_tail data points
+                if len(latency_values) > skip_tail:
+                    latency_values = latency_values[:-skip_tail]
+
+                # Calculate frame statistics for this file
+                if len(latency_values) > 0:
+                    # Convert frame indices to numeric values
+                    frame_indices = []
+                    for idx in frame_column:
+                        try:
+                            frame_indices.append(int(idx))
+                        except (ValueError, TypeError):
+                            continue
+
+                    # Skip the last skip_tail frame indices
+                    if len(frame_indices) > skip_tail:
+                        frame_indices = frame_indices[:-skip_tail]
+
+                    if len(frame_indices) > 0:
+                        # Calculate total frames as max_index - min_index + 1
+                        min_frame = min(frame_indices)
+                        max_frame = max(frame_indices)
+                        file_total_frames = max_frame - min_frame + 1
+                        file_satisfied_frames = sum(
+                            1 for lat in latency_values if lat <= slo_threshold
+                        )
+
+                        # Add to overall statistics
+                        all_latencies.extend(latency_values)
+                        total_frames += file_total_frames
+                        satisfied_frames += file_satisfied_frames
+
+                        print(
+                            f"    - {os.path.basename(file_path)}:"
+                            f" {file_total_frames} frames, "
+                            f"{file_satisfied_frames} satisfied "
+                            f"({file_satisfied_frames/len(latency_values)*100:.1f}%)"
+                        )
+        except Exception as e:
+            print(f"    Error reading {file_path}: {e}")
+
+    return all_latencies, total_frames, satisfied_frames
+
+
+def generate_figure_9(results_base_path, output_dir):
+    """
+    Generate Figure 9: SLO satisfaction rate comparison across applications
+
+    Args:
+        results_base_path (str): Base path to results directory
+        output_dir (str): Output directory for saving figures
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Define SLO thresholds for different applications
+    slo_thresholds = {
+        "video-transcoding": 100.0,
+        "video-od": 100.0,
+        "video-sr": 150.0,
+    }
+
+    # Define applications and their display names
+    applications = {
+        "video-transcoding": "SS",
+        "video-od": "AR",
+        "video-sr": "VC",
+    }
+
+    # Map scheduler directories to their names
+    scheduler_mapping = {
+        "default_all_tasks": "default",
+        "tutti_all_tasks": "tutti",
+        "smec_all_tasks": "smec",
+        "arma_all_tasks": "arma",
+    }
+
+    # Dictionary to store all results
+    all_data = {}
+
+    # Process data for each application
+    for app_dir, app_name in applications.items():
+        slo_threshold = slo_thresholds[app_dir]
+        print(f"\n=== Processing {app_name} (SLO: {slo_threshold}ms) ===")
+
+        app_data = {}
+
+        for scheduler_dir, scheduler_name in scheduler_mapping.items():
+            # Process only client directory
+            client_path = os.path.join(
+                results_base_path, scheduler_dir, app_dir, "client"
+            )
+
+            if os.path.exists(client_path):
+                print(f"  Processing {scheduler_name}/client...")
+                _, total_frames, satisfied_frames = read_latency_data_with_slo(
+                    client_path, slo_threshold, skip_lines=100, skip_tail=5
+                )
+
+                # Calculate satisfaction rate for this scheduler
+                if total_frames > 0:
+                    satisfaction_rate = (satisfied_frames / total_frames) * 100
+                    app_data[scheduler_name] = satisfaction_rate
+                    print(
+                        f"  {scheduler_name}: {satisfaction_rate:.1f}%"
+                        " satisfaction rate"
+                        f" ({satisfied_frames}/{total_frames} frames)"
+                    )
+                else:
+                    print(f"  {scheduler_name}: No valid data")
+            else:
+                print(f"  Client directory not found: {client_path}")
+
+        if app_data:
+            all_data[app_name] = app_data
+
+    # Calculate geometric means for each scheduler
+    schedulers = ["default", "tutti", "arma", "smec"]
+    geomean_data = {}
+
+    for scheduler in schedulers:
+        values = []
+        for app in applications.values():
+            if app in all_data and scheduler in all_data[app]:
+                values.append(all_data[app][scheduler])
+        if values:
+            # Calculate geometric mean
+            geomean_data[scheduler] = np.power(
+                np.prod(values), 1.0 / len(values)
+            )
+
+    # Create the bar chart
+    plt.figure(figsize=(24, 7))
+
+    # Set font properties
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
+    plt.rcParams["font.weight"] = "normal"
+
+    # Set style
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    # Define consistent colors and patterns for each scheduler type
+    scheduler_styles = {
+        "default": {"color": "#1f77b4", "label": "Default", "hatch": "/"},
+        "tutti": {"color": "#9467bd", "label": "Tutti", "hatch": "-"},
+        "smec": {"color": "#ff7f0e", "label": "SMEC", "hatch": None},
+        "arma": {"color": "#2ca02c", "label": "ARMA", "hatch": "\\"},
+    }
+
+    # Prepare data for plotting
+    app_names = list(applications.values())
+    all_apps_with_geomean = app_names + ["Geomean"]
+
+    # Calculate positions for grouped bars
+    n_apps = len(all_apps_with_geomean)
+    n_schedulers = len(schedulers)
+    bar_width = 0.25
+    bar_spacing = 0.02
+    group_spacing = 0.8
+
+    # Create x positions for each application group
+    group_width = n_schedulers * (bar_width + bar_spacing) - bar_spacing
+    app_positions = np.arange(n_apps) * (group_width + group_spacing)
+
+    # Plot bars for each scheduler
+    for i, scheduler in enumerate(schedulers):
+        satisfaction_rates = []
+        colors = []
+
+        # Add data for original applications
+        for app in app_names:
+            if app in all_data and scheduler in all_data[app]:
+                satisfaction_rates.append(all_data[app][scheduler])
+            else:
+                satisfaction_rates.append(0)  # Missing data
+
+            colors.append(scheduler_styles[scheduler]["color"])
+
+        # Add geometric mean data
+        if scheduler in geomean_data:
+            satisfaction_rates.append(geomean_data[scheduler])
+        else:
+            satisfaction_rates.append(0)
+        colors.append(scheduler_styles[scheduler]["color"])
+
+        # Calculate x positions for this scheduler across all applications
+        x_positions = app_positions + i * (bar_width + bar_spacing)
+
+        # Plot bars with patterns
+        bars = plt.bar(
+            x_positions,
+            satisfaction_rates,
+            width=bar_width,
+            color=colors,
+            alpha=0.9,
+            hatch=scheduler_styles[scheduler]["hatch"],
+            edgecolor="black",
+            linewidth=1.2,
+            label=scheduler_styles[scheduler]["label"],
+        )
+
+    # Customize the plot
+    plt.ylabel(
+        "SLO Satisfaction\nRate (%)",
+        fontsize=52,
+        fontweight="500",
+        color="#2c3e50",
+    )
+
+    # Set x-axis labels at the center of each application group
+    group_centers = app_positions + (group_width / 2)
+    plt.xticks(
+        group_centers, all_apps_with_geomean, fontsize=52, color="#2c3e50"
+    )
+
+    # Set y-axis limits and styling
+    plt.ylim(0, 100)
+    plt.tick_params(
+        axis="y",
+        which="major",
+        labelsize=52,
+        colors="#2c3e50",
+        width=1.5,
+        length=8,
+    )
+    plt.tick_params(
+        axis="x",
+        which="major",
+        labelsize=52,
+        colors="#2c3e50",
+        width=1.5,
+        length=8,
+    )
+
+    # Enhanced grid
+    plt.grid(True, alpha=0.3, linestyle="-", linewidth=0.8, color="#bdc3c7")
+
+    # Add legend
+    plt.legend(
+        fontsize=50,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        bbox_to_anchor=(0.5, 0.98),
+        loc="lower center",
+        ncol=4,
+        framealpha=0.95,
+        edgecolor="#333333",
+        facecolor="white",
+    )
+
+    # Style enhancements
+    plt.gca().spines["top"].set_linewidth(2.5)
+    plt.gca().spines["top"].set_color("#333333")
+    plt.gca().spines["right"].set_linewidth(2.5)
+    plt.gca().spines["right"].set_color("#333333")
+    plt.gca().spines["left"].set_linewidth(2.5)
+    plt.gca().spines["left"].set_color("#333333")
+    plt.gca().spines["bottom"].set_linewidth(2.5)
+    plt.gca().spines["bottom"].set_color("#333333")
+
+    # Set background color
+    plt.gca().set_facecolor("#fafafa")
+
+    plt.tight_layout()
+
+    # Save the plot
+    output_path = os.path.join(output_dir, "figure_9.pdf")
+    plt.savefig(output_path, bbox_inches="tight", facecolor="white")
+
+    print(f"\nFigure 9 saved as '{output_path}'")
+    plt.close()
