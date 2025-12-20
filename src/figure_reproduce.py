@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
+import re
 
 
 def read_e2e_latency_data(directory_path, skip_lines=100, skip_tail=5):
@@ -660,4 +661,540 @@ def generate_figure_9(results_base_path, output_dir):
     plt.savefig(output_path, bbox_inches="tight", facecolor="white")
 
     print(f"\nFigure 9 saved as '{output_path}'")
+    plt.close()
+
+
+def extract_timestamp_from_filename(filename):
+    """Extract timestamp from filename for matching files"""
+    match = re.search(r"(\d{8}_\d{9})", filename)
+    if match:
+        return match.group(1)
+    return None
+
+
+def calculate_network_latency_video_transcoding(
+    client_dir, server_dir, skip_lines=100, skip_tail=5
+):
+    """
+    Calculate network latency for video-transcoding (SS)
+
+    Args:
+        client_dir: Directory containing client latency files
+        server_dir: Directory containing server process files
+        skip_lines: Number of lines to skip from beginning
+        skip_tail: Number of lines to skip from end
+
+    Returns:
+        list: Network latency values
+    """
+    # Get client files and sort by timestamp
+    latency_files = glob.glob(os.path.join(client_dir, "latency_*.txt"))
+    latency_files_with_ts = []
+    for f in latency_files:
+        ts = extract_timestamp_from_filename(f)
+        if ts:
+            latency_files_with_ts.append((ts, f))
+    latency_files_with_ts.sort(key=lambda x: x[0])
+
+    # Get server 2560 files and sort by timestamp
+    process_files_2560 = glob.glob(
+        os.path.join(server_dir, "process_2560*_pipeline.txt")
+    )
+    process_files_with_ts = []
+    for f in process_files_2560:
+        ts = extract_timestamp_from_filename(f)
+        if ts:
+            process_files_with_ts.append((ts, f))
+    process_files_with_ts.sort(key=lambda x: x[0])
+
+    print(
+        f"  Found {len(latency_files_with_ts)} client files and"
+        f" {len(process_files_with_ts)} server 2560 files"
+    )
+
+    # Match by sorted order: smallest timestamp with smallest, largest with largest
+    network_latencies = []
+    num_pairs = min(len(latency_files_with_ts), len(process_files_with_ts))
+
+    for i in range(num_pairs):
+        latency_timestamp, latency_file = latency_files_with_ts[i]
+        process_timestamp, matching_process_file = process_files_with_ts[i]
+
+        print(
+            f"    Matching: {os.path.basename(latency_file)} (ts:"
+            f" {latency_timestamp}) <->"
+            f" {os.path.basename(matching_process_file)} (ts:"
+            f" {process_timestamp})"
+        )
+
+        # Read latency data with frame numbers
+        latency_data_by_frame = {}
+        try:
+            df = pd.read_csv(latency_file, sep=r"\s+", skiprows=1)
+            if len(df.columns) >= 2:
+                frame_column = df.iloc[:, 0]
+                latency_column = df.iloc[:, 1]
+
+                frames = []
+                latencies = []
+                for i in range(len(frame_column)):
+                    try:
+                        frame_num = int(frame_column.iloc[i])
+                        e2e_latency = float(
+                            str(latency_column.iloc[i])
+                            .replace("ms", "")
+                            .strip()
+                        )
+                        frames.append(frame_num)
+                        latencies.append(e2e_latency)
+                    except (ValueError, AttributeError):
+                        continue
+
+                # Skip head and tail
+                if len(frames) > skip_lines + skip_tail:
+                    frames = frames[skip_lines:-skip_tail]
+                    latencies = latencies[skip_lines:-skip_tail]
+
+                for frame_num, e2e_latency in zip(frames, latencies):
+                    latency_data_by_frame[frame_num] = e2e_latency
+        except Exception as e:
+            print(f"    Error reading latency file: {e}")
+            continue
+
+        # Read process data with frame numbers (DO NOT skip any data from server)
+        process_data_by_frame = {}
+        try:
+            df = pd.read_csv(matching_process_file, sep=r"\s+", skiprows=1)
+            if len(df.columns) >= 5:
+                frame_column = df.iloc[:, 0]
+
+                # SMEC has extra "Network Delay" column at the end
+                # For SMEC: Total is at -2, for others: Total is at -1
+                if "smec" in matching_process_file.lower():
+                    total_column = df.iloc[:, -2]  # SMEC: second to last
+                else:
+                    total_column = df.iloc[
+                        :, -1
+                    ]  # Default/Tutti/ARMA: last column
+
+                for i in range(len(frame_column)):
+                    try:
+                        frame_num = int(frame_column.iloc[i])
+                        total_time = float(
+                            str(total_column.iloc[i]).replace("ms", "").strip()
+                        )
+                        process_data_by_frame[frame_num] = total_time
+                    except (ValueError, AttributeError):
+                        continue
+
+        except Exception as e:
+            print(f"    Error reading process file: {e}")
+            continue
+
+        # Match by frame number and calculate network latency
+        matched = 0
+        for frame_num, e2e_latency in latency_data_by_frame.items():
+            if frame_num in process_data_by_frame:
+                total_time = process_data_by_frame[frame_num]
+                network_latency = e2e_latency - total_time
+                if network_latency > 0:
+                    network_latencies.append(network_latency)
+                    matched += 1
+
+        print(f"    Generated {matched} network latency values")
+
+    return network_latencies
+
+
+def calculate_network_latency_ar_sr(
+    client_dir, server_dir, skip_lines=100, skip_tail=5
+):
+    """
+    Calculate network latency for AR/SR applications
+
+    Args:
+        client_dir: Directory containing client latency files
+        server_dir: Directory containing server process files
+        skip_lines: Number of lines to skip from beginning
+        skip_tail: Number of lines to skip from end
+
+    Returns:
+        list: Network latency values
+    """
+    # Get client files and sort by timestamp
+    latency_files = glob.glob(os.path.join(client_dir, "latency_*.txt"))
+    latency_files_with_ts = []
+    for f in latency_files:
+        ts = extract_timestamp_from_filename(f)
+        if ts:
+            latency_files_with_ts.append((ts, f))
+    latency_files_with_ts.sort(key=lambda x: x[0])
+
+    print(f"  Found {len(latency_files_with_ts)} client files")
+
+    # Map client file to stream ID: smaller timestamp -> stream 0, larger -> stream 1
+    client_to_stream = {}
+    if len(latency_files_with_ts) >= 2:
+        client_to_stream[latency_files_with_ts[0][1]] = (
+            0  # Smallest timestamp -> stream 0
+        )
+        client_to_stream[latency_files_with_ts[1][1]] = (
+            1  # Largest timestamp -> stream 1
+        )
+        print(
+            f"    {os.path.basename(latency_files_with_ts[0][1])} -> stream 0"
+        )
+        print(
+            f"    {os.path.basename(latency_files_with_ts[1][1])} -> stream 1"
+        )
+    elif len(latency_files_with_ts) == 1:
+        client_to_stream[latency_files_with_ts[0][1]] = 0
+        print(
+            f"    {os.path.basename(latency_files_with_ts[0][1])} -> stream 0"
+        )
+
+    # Read all process data organized by stream and frame (DO NOT skip any data from server)
+    process_files = glob.glob(os.path.join(server_dir, "process_*.txt"))
+    process_data_by_stream_frame = {}
+
+    for process_file in process_files:
+        print(f"    Reading process file: {os.path.basename(process_file)}")
+        try:
+            df = pd.read_csv(process_file, sep=r"\s+", skiprows=1)
+            if len(df.columns) >= 6:
+                stream_column = df.iloc[:, 0]
+                frame_column = df.iloc[:, 1]
+
+                # Determine Total column position based on scheduler and app type
+                is_smec = "smec" in process_file.lower()
+                is_ar = "yolo" in process_file
+
+                if is_ar:
+                    # AR: Default/Tutti/ARMA at -2, SMEC at -4
+                    total_column = df.iloc[:, -4] if is_smec else df.iloc[:, -2]
+                else:
+                    # SR: Default/Tutti/ARMA at -1, SMEC at -3
+                    total_column = df.iloc[:, -3] if is_smec else df.iloc[:, -1]
+
+                for i in range(len(stream_column)):
+                    try:
+                        stream_id = int(stream_column.iloc[i])
+                        frame_num = int(frame_column.iloc[i])
+                        total_time = float(
+                            str(total_column.iloc[i]).replace("ms", "").strip()
+                        )
+                        key = (stream_id, frame_num)
+                        process_data_by_stream_frame[key] = total_time
+                    except (ValueError, AttributeError):
+                        continue
+
+                print(
+                    "    Extracted"
+                    f" {len(process_data_by_stream_frame)} stream-frame pairs"
+                )
+        except Exception as e:
+            print(f"    Error reading {process_file}: {e}")
+
+    # Process each client latency file
+    network_latencies = []
+    for latency_file in client_to_stream.keys():
+        stream_id = client_to_stream[latency_file]
+        print(
+            f"    Processing {os.path.basename(latency_file)} (stream"
+            f" {stream_id})..."
+        )
+
+        # Read latency data
+        try:
+            df = pd.read_csv(latency_file, sep=r"\s+", skiprows=1)
+            if len(df.columns) >= 2:
+                frame_column = df.iloc[:, 0]
+                latency_column = df.iloc[:, 1]
+
+                frames = []
+                latencies = []
+                for i in range(len(frame_column)):
+                    try:
+                        frame_num = int(frame_column.iloc[i])
+                        e2e_latency = float(
+                            str(latency_column.iloc[i])
+                            .replace("ms", "")
+                            .strip()
+                        )
+                        frames.append(frame_num)
+                        latencies.append(e2e_latency)
+                    except (ValueError, AttributeError):
+                        continue
+
+                # Skip head and tail
+                if len(frames) > skip_lines + skip_tail:
+                    frames = frames[skip_lines:-skip_tail]
+                    latencies = latencies[skip_lines:-skip_tail]
+
+                # Match with process data using the assigned stream ID
+                matched = 0
+                for frame_num, e2e_latency in zip(frames, latencies):
+                    key = (stream_id, frame_num)
+                    if key in process_data_by_stream_frame:
+                        total_time = process_data_by_stream_frame[key]
+                        network_latency = e2e_latency - total_time
+                        if network_latency > 0:
+                            network_latencies.append(network_latency)
+                            matched += 1
+
+                print(
+                    f"      Generated {matched} network latency values from"
+                    " this file"
+                )
+        except Exception as e:
+            print(f"      Error reading latency file: {e}")
+
+    return network_latencies
+
+
+def generate_figure_11(results_base_path, output_dir):
+    """
+    Generate Figure 11: Network latency CDF across applications
+
+    Args:
+        results_base_path (str): Base path to results directory
+        output_dir (str): Output directory for saving figures
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Define applications and their display names
+    applications = {
+        "video-transcoding": "SS",
+        "video-od": "AR",
+        "video-sr": "VC",
+    }
+
+    # Map scheduler directories to their names
+    scheduler_mapping = {
+        "default_all_tasks": "default",
+        "tutti_all_tasks": "tutti",
+        "smec_all_tasks": "smec",
+        "arma_all_tasks": "arma",
+    }
+
+    # Store all data for plotting
+    all_app_data = {}
+
+    # Process each application
+    for app_dir, app_name in applications.items():
+        print(f"\n=== Processing {app_name} ({app_dir}) ===")
+        all_app_data[app_name] = {}
+
+        for scheduler_dir, scheduler_name in scheduler_mapping.items():
+            client_path = os.path.join(
+                results_base_path, scheduler_dir, app_dir, "client"
+            )
+            server_path = os.path.join(
+                results_base_path, scheduler_dir, app_dir, "server"
+            )
+
+            if os.path.exists(client_path) and os.path.exists(server_path):
+                print(f"  Processing {scheduler_name}...")
+
+                # Calculate network latency based on app type
+                if app_dir == "video-transcoding":
+                    network_latencies = (
+                        calculate_network_latency_video_transcoding(
+                            client_path,
+                            server_path,
+                            skip_lines=100,
+                            skip_tail=5,
+                        )
+                    )
+                else:  # video-od or video-sr
+                    network_latencies = calculate_network_latency_ar_sr(
+                        client_path, server_path, skip_lines=100, skip_tail=5
+                    )
+
+                if network_latencies:
+                    all_app_data[app_name][scheduler_name] = network_latencies
+                    print(
+                        f"    Total: {len(network_latencies)} network latency"
+                        " values"
+                    )
+                    print(f"    Mean: {np.mean(network_latencies):.2f} ms")
+                    print(f"    Median: {np.median(network_latencies):.2f} ms")
+                    print(
+                        "    95th percentile:"
+                        f" {np.percentile(network_latencies, 95):.2f} ms"
+                    )
+                else:
+                    print(f"    No network latency data found")
+            else:
+                if not os.path.exists(client_path):
+                    print(f"  Client directory not found: {client_path}")
+                if not os.path.exists(server_path):
+                    print(f"  Server directory not found: {server_path}")
+
+    # Create combined plot
+    print(f"\n=== Creating combined network latency CDF plot ===")
+
+    fig, axes = plt.subplots(1, 3, figsize=(21, 6.5), sharey=True)
+
+    # Try to use seaborn style
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    # Enhanced colors and styles for each scheduler
+    plot_configs = {
+        "default": {
+            "color": "#1f77b4",
+            "linestyle": "-",
+            "marker": "o",
+            "markevery": 400,
+        },
+        "tutti": {
+            "color": "#9467bd",
+            "linestyle": ":",
+            "marker": "v",
+            "markevery": 400,
+        },
+        "smec": {
+            "color": "#ff7f0e",
+            "linestyle": "--",
+            "marker": "s",
+            "markevery": 400,
+        },
+        "arma": {
+            "color": "#2ca02c",
+            "linestyle": "-.",
+            "marker": "^",
+            "markevery": 400,
+        },
+    }
+
+    # Legend labels
+    legend_labels = {
+        "default": "Default",
+        "tutti": "Tutti",
+        "smec": "SMEC",
+        "arma": "ARMA",
+    }
+
+    # SLO values for network latency (same as E2E)
+    slo_values = {"SS": 100, "AR": 100, "VC": 150}
+
+    # Plot for each application
+    for idx, app_name in enumerate(["SS", "AR", "VC"]):
+        ax = axes[idx]
+
+        if app_name in all_app_data:
+            # Plot each scheduler for this application
+            for scheduler in ["default", "tutti", "arma", "smec"]:
+                if scheduler in all_app_data[app_name]:
+                    network_latencies = all_app_data[app_name][scheduler]
+                    sorted_data, cdf_values = calculate_cdf(network_latencies)
+
+                    ax.plot(
+                        sorted_data,
+                        cdf_values,
+                        color=plot_configs[scheduler]["color"],
+                        linestyle=plot_configs[scheduler]["linestyle"],
+                        linewidth=6,
+                        label=legend_labels[scheduler],
+                        alpha=0.9,
+                        marker=plot_configs[scheduler]["marker"],
+                        markevery=plot_configs[scheduler]["markevery"],
+                        markersize=12,
+                        markerfacecolor="white",
+                        markeredgewidth=3,
+                        markeredgecolor=plot_configs[scheduler]["color"],
+                    )
+
+            # Add SLO line
+            if app_name in slo_values:
+                ax.axvline(
+                    x=slo_values[app_name],
+                    color="#d62728",
+                    linestyle=":",
+                    linewidth=8,
+                    alpha=0.8,
+                    zorder=5,
+                )
+
+        # Customize each subplot
+        ax.set_xlabel(f"{app_name}", fontsize=52, color="#333333")
+
+        # Set axis properties
+        ax.set_ylim(0, 1.05)
+        ax.set_xscale("log")
+        ax.set_xlim(left=10)
+
+        # Grid styling
+        ax.grid(True, alpha=0.4, linestyle="--", linewidth=0.8, color="#cccccc")
+
+        # Tick styling
+        ax.tick_params(
+            axis="both",
+            which="major",
+            labelsize=52,
+            colors="#333333",
+            width=2,
+            length=8,
+        )
+
+        # Background color
+        ax.set_facecolor("#fafafa")
+
+        # Border styling
+        for spine in ax.spines.values():
+            spine.set_linewidth(2.5)
+            spine.set_color("#333333")
+
+        # Set custom ticks
+        import matplotlib.ticker as ticker
+
+        ax.yaxis.set_major_locator(ticker.FixedLocator([0, 0.5, 1.0]))
+        ax.xaxis.set_major_locator(ticker.FixedLocator([100, 1000, 10000]))
+
+    # Set y-axis label only for the leftmost subplot
+    axes[0].set_ylabel("CDF", fontsize=52, color="#333333")
+
+    # Create a single shared legend
+    handles, labels = axes[0].get_legend_handles_labels()
+
+    # Add SLO to legend
+    slo_line = plt.Line2D(
+        [0], [0], color="#d62728", linestyle=":", linewidth=8, alpha=0.8
+    )
+    handles.append(slo_line)
+    labels.append("SLO")
+
+    # Place legend at the top center of the entire figure
+    fig.legend(
+        handles,
+        labels,
+        fontsize=47,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        bbox_to_anchor=(0.53, 1.08),
+        loc="center",
+        ncol=5,
+        framealpha=0.95,
+        edgecolor="#333333",
+        facecolor="white",
+        columnspacing=0.8,
+        handletextpad=0.3,
+    )
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Save the plot
+    output_path = os.path.join(output_dir, "figure_11.pdf")
+    plt.savefig(output_path, bbox_inches="tight")
+
+    print(f"\nFigure 11 saved as '{output_path}'")
     plt.close()

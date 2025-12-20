@@ -8,7 +8,11 @@ from src.get_results import (
     get_client_results,
 )
 from src.get_results import clean_results
-from src.figure_reproduce import generate_figure_9, generate_figure_10
+from src.figure_reproduce import (
+    generate_figure_9,
+    generate_figure_10,
+    generate_figure_11,
+)
 
 
 def data_mode():
@@ -325,6 +329,10 @@ def figures_mode():
     # Generate Figure 10
     print("\n=== Generating Figure 10 ===")
     generate_figure_10(results_base_path, output_dir)
+
+    # Generate Figure 11
+    print("\n=== Generating Figure 11 ===")
+    generate_figure_11(results_base_path, output_dir)
 
     print("\nAll figures generated successfully!")
 
