@@ -557,3 +557,333 @@ def generate_figure_20_a(results_base_path, output_dir):
     print(f"\nFigure 20_a saved as:")
     print(f"  - {output_path_pdf}")
     plt.close()
+
+
+def read_remaining_time_file(file_path, skip_lines=100, skip_tail=5):
+    """
+    Read remaining time data from a single file.
+
+    Args:
+        file_path: Path to the remaining_time file
+        skip_lines: Number of lines to skip from beginning (default 100)
+        skip_tail: Number of lines to skip from end (default 5)
+
+    Returns:
+        list: Time diff values in microseconds
+    """
+    data = []
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+            # Skip header line and apply filtering
+            data_lines = lines[1:]  # Skip header
+
+            # Apply head and tail filtering
+            if len(data_lines) > skip_lines + skip_tail:
+                data_lines = data_lines[skip_lines:-skip_tail]
+
+            for line in data_lines:
+                if line.strip():
+                    parts = line.strip().split()
+                    if len(parts) >= 2:
+                        time_diff_us = float(parts[1])
+                        data.append(time_diff_us)
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+
+    return data
+
+
+def collect_remaining_time_data(results_base_path):
+    """
+    Collect remaining time data from all schedulers and applications.
+
+    Args:
+        results_base_path: Base path to results directory
+
+    Returns:
+        dict: Nested dictionary with structure: scheduler -> workload -> app -> data
+    """
+    schedulers = ["tutti", "arma", "smec"]
+    workloads = ["static", "dynamic"]
+
+    # Application mapping
+    app_mapping = {
+        "video-transcoding": "SS",
+        "video-od": "AR",
+        "video-sr": "VC",
+    }
+
+    all_data = {}
+
+    for scheduler in schedulers:
+        all_data[scheduler] = {}
+
+        for workload in workloads:
+            # Construct directory name
+            if workload == "static":
+                dir_name = f"{scheduler}_all_tasks"
+            else:
+                dir_name = f"{scheduler}_all_tasks_dynamic"
+
+            results_dir = os.path.join(results_base_path, dir_name)
+            all_data[scheduler][workload] = {}
+
+            print(f"\nProcessing {scheduler} - {workload} ({dir_name})...")
+
+            for app_dir, app_name in app_mapping.items():
+                server_dir = os.path.join(results_dir, app_dir, "server")
+
+                if not os.path.exists(server_dir):
+                    print(f"  Warning: {server_dir} not found")
+                    all_data[scheduler][workload][app_name] = []
+                    continue
+
+                # Find all remaining_time files
+                remaining_files = glob.glob(
+                    os.path.join(server_dir, "remaining_time_*.txt")
+                )
+
+                app_data = []
+                for file_path in remaining_files:
+                    file_data = read_remaining_time_file(
+                        file_path, skip_lines=100, skip_tail=5
+                    )
+                    # Convert to milliseconds
+                    file_data = [x / 1000.0 for x in file_data]
+                    app_data.extend(file_data)
+
+                all_data[scheduler][workload][app_name] = app_data
+                print(
+                    f"  {app_name}: {len(app_data)} data points from"
+                    f" {len(remaining_files)} files"
+                )
+
+    return all_data
+
+
+def generate_figure_19(results_base_path, output_dir):
+    """
+    Generate Figure 19: Remaining time estimation error P99 comparison
+
+    Args:
+        results_base_path: Base path to results directory
+        output_dir: Output directory for saving figures
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    print("=== Collecting remaining time data ===")
+    all_data = collect_remaining_time_data(results_base_path)
+
+    # Check if we have data
+    total_data_points = sum(
+        len(all_data[scheduler][workload][app])
+        for scheduler in all_data
+        for workload in all_data[scheduler]
+        for app in all_data[scheduler][workload]
+    )
+
+    if total_data_points == 0:
+        print("No remaining time data found!")
+        return
+
+    print(f"\nTotal data points loaded: {total_data_points}")
+
+    # Create the plot
+    print("\n=== Creating Figure 19: Remaining Time Error P99 Plot ===")
+
+    schedulers = ["Tutti", "Arma", "SMEC"]
+    scheduler_keys = ["tutti", "arma", "smec"]
+    applications = ["SS", "AR", "VC"]
+    workload_types = ["Static", "Dynamic"]
+
+    # Set up the plot
+    plt.figure(figsize=(23, 7))
+
+    # Set font properties
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
+    plt.rcParams["font.weight"] = "normal"
+
+    # Set style
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    # Define method styles
+    method_styles = {
+        "Arma": {"color": "#2ca02c", "label": "ARMA", "hatch": "\\\\"},
+        "Tutti": {"color": "#9467bd", "label": "Tutti", "hatch": "---"},
+        "SMEC": {"color": "#ff7f0e", "label": "SMEC", "hatch": None},
+    }
+
+    # Calculate P99 values
+    p99_data = {}
+    for scheduler_idx, scheduler_key in enumerate(scheduler_keys):
+        p99_data[schedulers[scheduler_idx]] = {}
+        for workload_idx, workload in enumerate(["static", "dynamic"]):
+            p99_data[schedulers[scheduler_idx]][workload] = {}
+            for app in applications:
+                data = all_data[scheduler_key][workload][app]
+                if data:
+                    p99_value = np.percentile(data, 99)
+                    p99_data[schedulers[scheduler_idx]][workload][
+                        app
+                    ] = p99_value
+                else:
+                    p99_data[schedulers[scheduler_idx]][workload][app] = 0
+
+    # Prepare data for plotting
+    n_apps = len(applications)
+    n_workloads = len(workload_types)
+    n_schedulers = len(schedulers)
+    n_groups = n_apps * n_workloads
+
+    bar_width = 0.25
+    bar_spacing = 0.02
+    group_spacing = 0.8
+
+    # Create x positions
+    group_width = n_schedulers * (bar_width + bar_spacing) - bar_spacing
+    group_positions = np.arange(n_groups) * (group_width + group_spacing)
+
+    # Plot bars for each scheduler
+    for scheduler_idx, scheduler in enumerate(schedulers):
+        p99_values = []
+        x_positions = []
+
+        group_idx = 0
+        for workload_idx, workload in enumerate(["static", "dynamic"]):
+            for app in applications:
+                p99_value = p99_data[scheduler][workload][app]
+                p99_values.append(p99_value)
+
+                x_pos = group_positions[group_idx] + scheduler_idx * (
+                    bar_width + bar_spacing
+                )
+                x_positions.append(x_pos)
+                group_idx += 1
+
+        # Plot bars
+        plt.bar(
+            x_positions,
+            p99_values,
+            width=bar_width,
+            color=method_styles[scheduler]["color"],
+            alpha=0.9,
+            hatch=method_styles[scheduler]["hatch"],
+            edgecolor="black",
+            linewidth=1.2,
+            label=method_styles[scheduler]["label"],
+        )
+
+    # Customize the plot
+    plt.ylabel("P99 Error (ms)", fontsize=52, fontweight="500", color="#2c3e50")
+
+    # Set x-axis labels
+    group_centers = group_positions + (group_width / 2)
+
+    # Create combined labels
+    combined_labels = []
+    for workload_idx in range(n_workloads):
+        for app in applications:
+            combined_labels.append(f"{app}\n{workload_types[workload_idx]}")
+
+    plt.xticks(
+        group_centers,
+        combined_labels,
+        fontsize=38,
+        color="#2c3e50",
+        ha="center",
+    )
+
+    # Set y-axis to log scale
+    plt.yscale("log")
+
+    # Set y-axis limits
+    current_ylim = plt.ylim()
+    plt.ylim(current_ylim[0], current_ylim[1] * 3)
+
+    # Tick styling
+    plt.tick_params(
+        axis="y",
+        which="major",
+        labelsize=54,
+        colors="#2c3e50",
+        width=1.5,
+        length=8,
+    )
+    plt.tick_params(
+        axis="y",
+        which="minor",
+        labelsize=52,
+        colors="#2c3e50",
+        width=1,
+        length=4,
+    )
+    plt.tick_params(
+        axis="x",
+        which="major",
+        labelsize=52,
+        colors="#2c3e50",
+        width=1.5,
+        length=8,
+    )
+
+    # Grid
+    plt.grid(True, alpha=0.3, linestyle="-", linewidth=0.8, color="#bdc3c7")
+
+    # Legend
+    plt.legend(
+        fontsize=50,
+        frameon=False,
+        bbox_to_anchor=(0.5, 1.09),
+        loc="upper center",
+        ncol=3,
+    )
+
+    # Style enhancements
+    plt.gca().spines["top"].set_linewidth(2.5)
+    plt.gca().spines["top"].set_color("#333333")
+    plt.gca().spines["right"].set_linewidth(2.5)
+    plt.gca().spines["right"].set_color("#333333")
+    plt.gca().spines["left"].set_linewidth(2.5)
+    plt.gca().spines["left"].set_color("#333333")
+    plt.gca().spines["bottom"].set_linewidth(2.5)
+    plt.gca().spines["bottom"].set_color("#333333")
+
+    # Background color
+    plt.gca().set_facecolor("#fafafa")
+
+    plt.tight_layout()
+
+    # Save plot (PDF only)
+    output_path_pdf = os.path.join(output_dir, "figure_19.pdf")
+    plt.savefig(output_path_pdf, bbox_inches="tight", facecolor="white")
+
+    print(f"\nFigure 19 saved as: {output_path_pdf}")
+    plt.close()
+
+
+if __name__ == "__main__":
+    """
+    Main function to generate figures
+    """
+    # Set base path
+    results_base_path = "results"
+    output_dir = "figures"
+
+    print("=== Generating Figure 20_a: Network Estimation Error ===")
+    generate_figure_20_a(results_base_path, output_dir)
+    print("\nFigure 20_a generation complete!")
+
+    print("\n" + "=" * 60)
+    print("=== Generating Figure 19: Remaining Time Error ===")
+    generate_figure_19(results_base_path, output_dir)
+    print("\nFigure 19 generation complete!")
