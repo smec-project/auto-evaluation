@@ -28,6 +28,7 @@ from visualization.figure_microbench import (
     generate_figure_18_b,
     generate_figure_21,
 )
+from visualization.figure_accuracy import generate_figure_20_a
 
 
 def data_mode():
@@ -385,9 +386,14 @@ def figures_mode():
     # generate_figure_18_b(results_base_path, output_dir)
     # print("\nAll figures generated successfully!")
 
-    # Generate Figure 21
-    print("\n=== Generating Figure 21 ===")
-    generate_figure_21(results_base_path, output_dir)
+    # # Generate Figure 21
+    # print("\n=== Generating Figure 21 ===")
+    # generate_figure_21(results_base_path, output_dir)
+    # print("\nAll figures generated successfully!")
+
+    # Generate Figure 20a
+    print("\n=== Generating Figure 20a ===")
+    generate_figure_20_a(results_base_path, output_dir)
     print("\nAll figures generated successfully!")
 
 
