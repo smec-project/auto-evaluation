@@ -8,22 +8,22 @@ from src.get_results import (
     get_client_results,
 )
 from src.get_results import clean_results
-from src.figure_reproduce_static import (
+from visualization.figure_reproduce_static import (
     generate_figure_9,
     generate_figure_10,
     generate_figure_11,
     generate_figure_12,
 )
-from src.figure_reproduce_dynamic import (
+from visualization.figure_reproduce_dynamic import (
     generate_figure_13,
     generate_figure_14,
     generate_figure_15,
     generate_figure_16,
 )
-from src.figure_be_tp import (
+from visualization.figure_be_tp import (
     generate_figure_17,
 )
-from src.figure_microbench import (
+from visualization.figure_microbench import (
     generate_figure_18_a,
     generate_figure_18_b,
     generate_figure_21,
