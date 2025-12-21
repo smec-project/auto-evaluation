@@ -26,6 +26,7 @@ from src.figure_be_tp import (
 from src.figure_microbench import (
     generate_figure_18_a,
     generate_figure_18_b,
+    generate_figure_21,
 )
 
 
@@ -379,9 +380,14 @@ def figures_mode():
     # generate_figure_18_a(results_base_path, output_dir)
     # print("\nAll figures generated successfully!")
 
-    # Generate Figure 18b
-    print("\n=== Generating Figure 18b ===")
-    generate_figure_18_b(results_base_path, output_dir)
+    # # Generate Figure 18b
+    # print("\n=== Generating Figure 18b ===")
+    # generate_figure_18_b(results_base_path, output_dir)
+    # print("\nAll figures generated successfully!")
+
+    # Generate Figure 21
+    print("\n=== Generating Figure 21 ===")
+    generate_figure_21(results_base_path, output_dir)
     print("\nAll figures generated successfully!")
 
 

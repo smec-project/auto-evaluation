@@ -794,3 +794,390 @@ def generate_figure_18_b(results_base_path, output_dir):
 
     # Close the figure
     plt.close()
+
+
+def read_latency_data_with_filtering(
+    directory_path, slo_threshold, skip_head=100, skip_tail=5
+):
+    """
+    Read E2E latency data from client directory with filtering
+
+    Args:
+        directory_path: Path to client directory containing latency files
+        slo_threshold: SLO threshold in milliseconds
+        skip_head: Number of lines to skip from the beginning
+        skip_tail: Number of lines to skip from the end
+
+    Returns:
+        tuple: (all_latencies, total_frames, satisfied_frames)
+    """
+    all_latencies = []
+    total_frames = 0
+    satisfied_frames = 0
+
+    # Find all latency files
+    file_pattern = os.path.join(directory_path, "latency_*.txt")
+    files = glob.glob(file_pattern)
+
+    print(f"  Processing {len(files)} files...")
+
+    for file_path in files:
+        try:
+            # Read the file, skip header
+            df = pd.read_csv(file_path, sep=r"\s+", skiprows=1)
+
+            if len(df.columns) >= 2:
+                frame_column = df.iloc[:, 0]
+                latency_column = df.iloc[:, 1]
+
+                # Convert to lists
+                frames = []
+                latencies = []
+
+                for i in range(len(frame_column)):
+                    try:
+                        frame_num = int(frame_column.iloc[i])
+                        latency_val = float(
+                            str(latency_column.iloc[i])
+                            .replace("ms", "")
+                            .strip()
+                        )
+                        frames.append(frame_num)
+                        latencies.append(latency_val)
+                    except (ValueError, AttributeError):
+                        continue
+
+                # Filter: skip head and tail
+                if len(frames) > skip_head + skip_tail:
+                    frames = frames[skip_head:-skip_tail]
+                    latencies = latencies[skip_head:-skip_tail]
+
+                if len(frames) > 0:
+                    # Calculate total frames based on frame indices
+                    min_frame = min(frames)
+                    max_frame = max(frames)
+                    file_total_frames = max_frame - min_frame + 1
+                    file_satisfied_frames = sum(
+                        1 for lat in latencies if lat <= slo_threshold
+                    )
+
+                    all_latencies.extend(latencies)
+                    total_frames += file_total_frames
+                    satisfied_frames += file_satisfied_frames
+
+                    print(
+                        f"    {os.path.basename(file_path)}:"
+                        f" {file_total_frames} frames,"
+                        f" {file_satisfied_frames}/{len(latencies)} satisfied"
+                    )
+
+        except Exception as e:
+            print(f"    Error reading {file_path}: {e}")
+
+    return all_latencies, total_frames, satisfied_frames
+
+
+def collect_drop_performance_data(results_base_path):
+    """
+    Collect SLO satisfaction data for drop performance comparison
+
+    Args:
+        results_base_path: Base path to results directory
+
+    Returns:
+        dict: Dictionary containing data organized by workload, condition, and app
+    """
+    # Define applications and their SLO thresholds
+    applications = {
+        "video-transcoding": {"name": "SS", "slo": 100.0},
+        "video-od": {"name": "AR", "slo": 100.0},
+        "video-sr": {"name": "VC", "slo": 150.0},
+    }
+
+    # Define directory mappings
+    directory_mapping = {
+        "static": {
+            "drop": "smec_all_tasks",
+            "wo-drop": "smec_all_tasks_wo_drop",
+        },
+        "dynamic": {
+            "drop": "smec_all_tasks_dynamic",
+            "wo-drop": "smec_all_tasks_dynamic_wo_drop",
+        },
+    }
+
+    # Dictionary to store all results
+    all_data = {}
+
+    for workload_type in ["static", "dynamic"]:
+        workload_data = {}
+        print(f"\n=== Processing {workload_type} workload ===")
+
+        for condition in ["drop", "wo-drop"]:
+            condition_data = {}
+            dir_name = directory_mapping[workload_type][condition]
+            method_dir = os.path.join(results_base_path, dir_name)
+
+            print(f"  Condition: {condition} ({dir_name})")
+
+            if not os.path.exists(method_dir):
+                print(f"    Directory not found: {method_dir}")
+                continue
+
+            for app_key, app_info in applications.items():
+                app_name = app_info["name"]
+                slo_threshold = app_info["slo"]
+
+                # Client directory path
+                client_dir = os.path.join(method_dir, app_key, "client")
+
+                if os.path.exists(client_dir):
+                    print(f"    Processing {app_name} (SLO: {slo_threshold}ms)")
+                    _, total_frames, satisfied_frames = (
+                        read_latency_data_with_filtering(
+                            client_dir,
+                            slo_threshold,
+                            skip_head=100,
+                            skip_tail=5,
+                        )
+                    )
+
+                    if total_frames > 0:
+                        satisfaction_rate = (
+                            satisfied_frames / total_frames
+                        ) * 100
+                        condition_data[app_name] = satisfaction_rate
+                        print(
+                            f"      Satisfaction rate: {satisfaction_rate:.1f}%"
+                        )
+                    else:
+                        condition_data[app_name] = 0
+                        print(f"      No valid data")
+                else:
+                    condition_data[app_name] = 0
+                    print(f"    {app_name}: Client directory not found")
+
+            workload_data[condition] = condition_data
+
+        all_data[workload_type] = workload_data
+
+    return all_data
+
+
+def generate_figure_21(results_base_path, output_dir):
+    """
+    Generate Figure 21: Drop Performance Comparison
+
+    Args:
+        results_base_path: Base path to results directory
+        output_dir: Output directory for saving figures
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    print("=== Drop Performance Analysis (Figure 21) ===")
+
+    # Collect data
+    all_data = collect_drop_performance_data(results_base_path)
+
+    if not all_data:
+        print("No data found for any workloads")
+        return
+
+    # Print summary
+    print("\n=== SUMMARY ===")
+    for workload, workload_data in all_data.items():
+        print(f"{workload}:")
+        for condition, condition_data in workload_data.items():
+            print(f"  {condition}:")
+            for app_name, satisfaction_rate in condition_data.items():
+                print(f"    {app_name}: {satisfaction_rate:.1f}%")
+
+    # Create bar chart
+    print("\n=== Creating Figure 21 ===")
+
+    plt.figure(figsize=(17, 5.5))
+
+    # Set font properties
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
+    plt.rcParams["font.weight"] = "normal"
+
+    # Set style
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    # Define colors for applications
+    app_colors = {
+        "SS": "#2ca02c",  # green
+        "AR": "#1f77b4",  # blue
+        "VC": "#ff7f0e",  # orange
+    }
+
+    # Prepare data for plotting
+    applications = ["SS", "AR", "VC"]
+    workloads = ["static", "dynamic"]
+    conditions = ["drop", "wo-drop"]
+
+    # Calculate positions for grouped bars
+    n_workloads = len(workloads)
+    n_conditions = len(conditions)
+    n_apps = len(applications)
+
+    # Bar width and spacing
+    bar_width = 0.18
+    app_spacing = 0.04
+    condition_group_width = n_apps * bar_width + (n_apps - 1) * app_spacing
+    condition_spacing = 0.4
+    workload_spacing = 0.8
+
+    # Create positions for workload groups
+    workload_base_positions = np.arange(n_workloads) * (
+        n_conditions * condition_group_width
+        + condition_spacing
+        + workload_spacing
+    )
+
+    # Plot bars
+    for workload_idx, workload in enumerate(workloads):
+        workload_base = workload_base_positions[workload_idx]
+
+        for cond_idx, condition in enumerate(conditions):
+            # Calculate base position for this condition group
+            condition_base = workload_base + cond_idx * (
+                condition_group_width + condition_spacing
+            )
+
+            for app_idx, app in enumerate(applications):
+                # Get the satisfaction rate for this combination
+                satisfaction_rate = 0
+                if (
+                    workload in all_data
+                    and condition in all_data[workload]
+                    and app in all_data[workload][condition]
+                ):
+                    satisfaction_rate = all_data[workload][condition][app]
+
+                # Calculate x position for this bar
+                x_pos = (
+                    condition_base
+                    + app_idx * (bar_width + app_spacing)
+                    + 0.5 * bar_width
+                )
+
+                # Plot bar
+                plt.bar(
+                    x_pos,
+                    satisfaction_rate,
+                    width=bar_width,
+                    color=app_colors[app],
+                    alpha=0.8,
+                    edgecolor="black",
+                    linewidth=1.2,
+                    label=app if workload_idx == 0 and cond_idx == 0 else "",
+                )
+
+    # Prepare x-axis labels and positions
+    x_positions = []
+    x_labels = []
+
+    for workload_idx, workload in enumerate(workloads):
+        workload_base = workload_base_positions[workload_idx]
+
+        for cond_idx, condition in enumerate(conditions):
+            condition_base = workload_base + cond_idx * (
+                condition_group_width + condition_spacing
+            )
+
+            # Center position (middle of AR bar at index 1)
+            middle_bar_pos = (
+                condition_base + 1 * (bar_width + app_spacing) + bar_width / 2
+            )
+            x_positions.append(middle_bar_pos)
+
+            # Create label
+            workload_short = "Static" if workload == "static" else "Dynamic"
+            condition_label = "w/ Drop" if condition == "drop" else "w/o Drop"
+            x_labels.append(f"{condition_label}\n{workload_short}")
+
+    # Customize the plot
+    plt.ylabel(
+        "SLO Satisfaction\nRate (%)",
+        fontsize=40,
+        fontweight="500",
+        color="#2c3e50",
+    )
+
+    # Set x-axis labels
+    plt.xticks(x_positions, x_labels, fontsize=32, color="#2c3e50")
+
+    # Add vertical separators between workload groups
+    for workload_idx in range(1, n_workloads):
+        separator_x = (
+            workload_base_positions[workload_idx] - workload_spacing / 2
+        )
+        plt.axvline(
+            x=separator_x, color="gray", linestyle="--", alpha=0.5, linewidth=2
+        )
+
+    # Set y-axis limits and styling
+    plt.ylim(0, 115)
+    plt.yticks([0, 50, 100])
+    plt.tick_params(
+        axis="y",
+        which="major",
+        labelsize=40,
+        colors="#2c3e50",
+        width=1.5,
+        length=8,
+    )
+    plt.tick_params(
+        axis="x",
+        which="major",
+        labelsize=38,
+        colors="#2c3e50",
+        width=1.5,
+        length=8,
+        pad=10,
+    )
+
+    # Enhanced grid
+    plt.grid(True, alpha=0.3, linestyle="-", linewidth=0.8, color="#bdc3c7")
+
+    # Add legend at the top center
+    plt.legend(
+        fontsize=38,
+        frameon=False,
+        bbox_to_anchor=(0.5, 1.1),
+        loc="upper center",
+        ncol=3,
+    )
+
+    # Style enhancements
+    plt.gca().spines["top"].set_linewidth(2.5)
+    plt.gca().spines["top"].set_color("#333333")
+    plt.gca().spines["right"].set_linewidth(2.5)
+    plt.gca().spines["right"].set_color("#333333")
+    plt.gca().spines["left"].set_linewidth(2.5)
+    plt.gca().spines["left"].set_color("#333333")
+    plt.gca().spines["bottom"].set_linewidth(2.5)
+    plt.gca().spines["bottom"].set_color("#333333")
+
+    # Set background color
+    plt.gca().set_facecolor("#fafafa")
+
+    plt.tight_layout()
+
+    # Save the plot (PDF only)
+    output_path_pdf = os.path.join(output_dir, "figure_21.pdf")
+    plt.savefig(
+        output_path_pdf, dpi=300, bbox_inches="tight", facecolor="white"
+    )
+
+    print(f"\nFigure 21 saved as: {output_path_pdf}")
+
+    plt.close()
