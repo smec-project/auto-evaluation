@@ -1,20 +1,23 @@
-# Remote Command Executor with YAML Configuration
+# SMEC Automated Evaluation
 
-This module uses the Fabric library to connect to remote hosts and execute commands in the background, with support for YAML configuration files to manage multiple hosts.
+## Overview
 
-## Features
+This repository contains the automated evaluation scripts for reproducing the experiments and figures presented in the SMEC paper.
 
-- Connect to remote hosts and execute background commands
-- Support for SSH key and password authentication
-- Support for proxy connections (ProxyCommand)
-- YAML configuration file management for multiple hosts
-- Automatic PID retrieval for background processes
-- Support for command output redirection to log files
-- Check background process status
-- Batch command execution on multiple hosts
-- Complete error handling and logging
+### About SMEC
 
-## Installation
+SMEC (SLO-Aware Multi-Access Edge Computing) is a project designed for mobile edge computing environments to enable SLO-Awareness. The system addresses the challenges of dynamic workloads, network latency variations, and heterogeneous computing resources in mobile edge computing scenarios.
+
+**Important Note**: All configurations and scripts in this repository are specifically designed for and tested on the **UTNS (University of Texas Network Systems) testbed**. The testbed infrastructure, network topology, and hardware specifications are integral to reproducing the paper's results.
+
+## Prerequisites
+
+Before running the evaluation scripts, ensure you have:
+
+- Python 3.8 or higher
+- SSH access to UTNS testbed nodes
+
+Install required Python packages:
 
 ```bash
 pip install -r requirements.txt
@@ -22,9 +25,21 @@ pip install -r requirements.txt
 
 ## Configuration
 
-### YAML Configuration File Structure
+### Step 1: Configure SSH Connection
 
-Create a `hosts_config.yaml` file to configure your hosts:
+Before running any experiments, you need to configure the SSH connection settings in `hosts_config.yaml`.
+
+#### File Location
+
+```text
+auto-evaluation/hosts_config.yaml
+```
+
+#### Required Changes
+
+The repository already includes a working `hosts_config.yaml` for the UTNS testbed. In most cases, you can keep it as-is and only update the SSH private key path (`key_filename`) to match your local key.
+
+Below is an example configuration consistent with the current `hosts_config.yaml` in this repo (you typically only need to change `key_filename`):
 
 ```yaml
 hosts:
@@ -32,231 +47,195 @@ hosts:
     host: 192.168.0.15
     user: root
     port: 22
-    key_filename: ~/.ssh/id_rsa
+    key_filename: ~/.ssh/id_rsa    # Change this to your local SSH private key path
     proxy_command: ssh zx@dex.csres.utexas.edu -W 192.168.0.15:%p
-    forward_agent: true
-    timeout: 30
-    description: "Amari host via proxy"
-    
+
   ran_server:
     host: edge0
     user: zx
     port: 22
-    key_filename: ~/.ssh/id_rsa
+    key_filename: ~/.ssh/id_rsa    # Change this to your local SSH private key path
     proxy_command: ssh zx@dex.csres.utexas.edu -W %h:%p
-    forward_agent: false
-    timeout: 30
-    description: "Edge0 host via proxy"
-    
+
   edge_server:
     host: ipu0
     user: zx
     port: 22
-    key_filename: ~/.ssh/id_rsa
+    key_filename: ~/.ssh/id_rsa    # Change this to your local SSH private key path
     proxy_command: ssh zx@dex.csres.utexas.edu -W %h:%p
-    forward_agent: false
-    timeout: 30
-    description: "IPU0 host via proxy"
-
-defaults:
-  timeout: 30
-  port: 22
-  key_filename: ~/.ssh/id_rsa
-  forward_agent: false
 
 proxy:
   host: dex.csres.utexas.edu
   user: zx
   port: 22
-  key_filename: ~/.ssh/id_rsa
+  key_filename: ~/.ssh/id_rsa      # Change this to your local SSH private key path
 ```
 
-## Usage
+#### For UTNS Testbed Users
 
-### Basic Usage
+If you are using the UTNS testbed for artifact evaluation (pre-configured environment):
 
-```python
-from src.host_manager import HostManager
+1. **Public Key Setup**: The authors will help configure your public SSH key on the UTNS testbed nodes.
+2. **Key Path Update (Required)**: You only need to update **`key_filename`** in `hosts_config.yaml` to point to your **local private key** that matches the configured public key.
 
-# Create host manager
-manager = HostManager("hosts_config.yaml")
+Example:
 
-# List all available hosts
-hosts = manager.list_hosts()
-print(hosts)
-
-# Execute command on specific host
-result = manager.execute_on_host(
-    host_name="amari",
-    command="echo 'Hello from amari' && hostname"
-)
-
-print(f"Success: {result['success']}")
-print(f"PID: {result['pid']}")
-print(f"Output: {result['output']}")
+```yaml
+key_filename: /home/yourname/.ssh/id_rsa_utns
 ```
 
-### Batch Execution
+### Step 2: Verify Configuration
 
-```python
-# Execute command on all hosts
-all_results = manager.execute_on_all_hosts(
-    command="echo 'Broadcast message' && date"
-)
+Test your SSH connections before running experiments:
 
-for host, result in all_results.items():
-    print(f"{host}: {result['success']}")
+```bash
+python src/host_manager.py --test-connections
 ```
 
-### Connection Testing
+This will verify that all configured hosts are reachable.
 
-```python
-# Test connections to all hosts
-connection_status = manager.test_connections()
-for host, status in connection_status.items():
-    print(f"{host}: {'✓' if status else '✗'}")
+## Running the Evaluation
+
+The evaluation process consists of three main steps, executed using the `auto_evaluation.py` script:
+
+### Step 1: Data Collection (Mode: `data`)
+
+This step runs all experiments and collects raw data from the testbed.
+
+```bash
+python auto_evaluation.py -m data
 ```
 
-### Convenience Functions
+**Expected Duration**: Approximately **2 hours**
 
-```python
-from src.host_manager import execute_on_host
+**What it does**:
 
-# Execute command directly
-result = execute_on_host(
-    host_name="ran_server",
-    command="uptime"
-)
+- Deploys SMEC and baseline schedulers on the testbed
+- Runs experiments with different workload configurations (static and dynamic)
+- Runs experiments with different scheduler configurations (SMEC, ARMA, Tutti, Default)
+- Collects raw logs from all testbed nodes (RAN logs, scheduler logs, server results, client results)
+- Stores all collected data in the `results/` directory
+
+**Output Directory Structure**:
+
+```text
+results/
+├── smec_all_tasks/
+├── smec_all_tasks_dynamic/
+├── smec_all_tasks_disable_32cpu/
+├── smec_all_tasks_dynamic_disable_32cpu/
+├── arma_all_tasks/
+├── arma_all_tasks_dynamic/
+├── tutti_all_tasks/
+├── tutti_all_tasks_dynamic/
+├── default_all_tasks/
+└── default_all_tasks_dynamic/
 ```
 
-## Advanced Features
+### Step 2: Data Preprocessing (Mode: `preprocess`)
 
-### Background Task Execution
+This step processes raw logs and extracts relevant metrics for figure generation.
 
-```python
-# Execute long-running task
-result = manager.execute_on_host(
-    host_name="amari",
-    command="python3 /path/to/long_running_script.py"
-)
-
-if result['success'] and result['pid']:
-    print(f"Task started with PID: {result['pid']}")
+```bash
+python auto_evaluation.py -m preprocess
 ```
 
-### Command Execution with Logging
+**Expected Duration**: Less than **5 minutes**
 
-```python
-from src.remote_executor import execute_background_command_with_logging
+**What it does**:
 
-# Redirect output to log file
-result = execute_background_command_with_logging(
-    host="192.168.0.15",
-    command="python3 /path/to/script.py",
-    log_file="/tmp/script.log",
-    user="root",
-    key_filename="~/.ssh/id_rsa"
-)
+- **Part 1**: Processes controller logs to extract remaining time information
+  - Processes `smec_all_tasks/controller.log`
+  - Processes `smec_all_tasks_dynamic/controller.log`
+  - Generates `remaining_time_ue*.txt` files in respective server directories
+
+- **Part 2**: Processes scheduler logs to extract waiting and processing time information
+  - Processes `smec_all_tasks_disable_32cpu/scheduler.log`
+  - Processes `smec_all_tasks_dynamic_disable_32cpu/scheduler.log`
+  - Generates `waiting_client*.txt` and `processing_client*.txt` files in respective server directories
+
+**Output Files** (added to results directories):
+
+```text
+results/
+├── smec_all_tasks/
+│   ├── video-transcoding/server/remaining_time_ue1.txt
+│   ├── video-transcoding/server/remaining_time_ue2.txt
+│   ├── video-od/server/remaining_time_ue3.txt
+│   └── ...
+├── smec_all_tasks_disable_32cpu/
+│   ├── video-transcoding/server/waiting_client001.txt
+│   ├── video-transcoding/server/processing_client0001.txt
+│   └── ...
 ```
 
-### Basic Environment Setup
+### Step 3: Figure Generation (Mode: `figures`)
 
-```python
-from src.basic_env_setup import BasicEnvSetup
+This step generates all figures presented in the paper.
 
-# Create setup instance
-setup = BasicEnvSetup()
-
-# Set up complete environment (LTE + 5G)
-results = setup.setup_complete_environment(wait_time=15)
-
-# Check if setup was successful
-if results['overall_success']:
-    print("Environment setup completed successfully!")
-else:
-    print("Setup completed with errors")
-
-# Clean up environment when done
-cleanup_results = setup.cleanup_environment()
+```bash
+python auto_evaluation.py -m figures
 ```
 
-## Configuration Parameters
+**Expected Duration**: Less than **2 minutes**
 
-### Host Configuration Parameters
+**What it does**:
 
-- `host`: Remote host IP address or hostname
-- `user`: SSH username
-- `port`: SSH port (default: 22)
-- `key_filename`: SSH private key file path
-- `proxy_command`: SSH proxy command
-- `forward_agent`: Whether to forward SSH agent
-- `timeout`: Connection timeout in seconds
-- `description`: Host description
+- Reads processed data from `results/` directory
+- Generates all paper figures (Figure 9 through Figure 21)
+- Saves figures in PDF format to the `figures/` directory
 
-### Default Configuration
+**Generated Figures**:
 
-The `defaults` section defines default values for all hosts. If a host doesn't specify a parameter, the default value will be used.
-
-### Proxy Configuration
-
-The `proxy` section defines proxy server configuration information.
-
-## Return Value Format
-
-All execution functions return a dictionary containing the following keys:
-
-- `success`: Boolean indicating if command was executed successfully
-- `pid`: Background process PID (if available)
-- `output`: Immediate command output
-- `error`: Error message if execution failed
-- `connection_info`: Connection information
-
-## Error Handling
-
-The module includes complete error handling mechanisms:
-
-- Configuration file loading failures are logged
-- Connection failures return detailed error information
-- Command execution failures are logged
-- All exceptions are caught and logged
-
-## Security Considerations
-
-1. Prefer SSH key authentication over passwords
-2. Ensure SSH private key file permissions are correct (600)
-3. Don't hardcode passwords in code
-4. Use environment variables or configuration files for sensitive information
-5. Regularly update SSH keys
-
-## Logging
-
-The module uses Python's logging module to record operation information:
-
-```python
-import logging
-logging.basicConfig(level=logging.INFO)
+```text
+figures/
+├── figure_9.pdf      # Static workload - End-to-end latency (SMEC vs baselines)
+├── figure_10.pdf     # Static workload - Throughput comparison
+├── figure_11.pdf     # Static workload - SLO violation rate
+├── figure_12.pdf     # Static workload - Resource utilization
+├── figure_13.pdf     # Dynamic workload - End-to-end latency
+├── figure_14.pdf     # Dynamic workload - Throughput comparison
+├── figure_15.pdf     # Dynamic workload - SLO violation rate
+├── figure_16.pdf     # Dynamic workload - Resource utilization
+├── figure_17.pdf     # Best-effort task throughput
+├── figure_18_a.pdf   # Microbenchmark - Processing time estimation
+├── figure_18_b.pdf   # Microbenchmark - Queue waiting time estimation
+├── figure_19.pdf     # Remaining time estimation error (P99)
+├── figure_20_a.pdf   # Network latency estimation error (Box plot)
+├── figure_20_b.pdf   # Processing time estimation error (Box plot)
+└── figure_21.pdf     # Scheduler overhead analysis
 ```
 
-## Example Files
+## Complete Workflow Example
 
-- `hosts_config.yaml`: Host configuration file example
-- `src/basic_env_setup.py`: Basic environment setup for LTE and 5G services
-- `src/example_basic_setup.py`: Example usage of the basic environment setup
+To reproduce all experiments and figures from scratch:
 
-## Troubleshooting
+```bash
+# Step 1: Collect experimental data (~2 hours)
+python auto_evaluation.py -m data
 
-### Common Issues
+# Step 2: Preprocess the collected data (~5 minutes)
+python auto_evaluation.py -m preprocess
 
-1. **Connection failures**: Check SSH key permissions and network connectivity
-2. **Proxy connection issues**: Ensure proxy server is accessible
-3. **Permission errors**: Check user permissions and file permissions
-4. **Timeout errors**: Increase timeout parameter value
+# Step 3: Generate all paper figures (~2 minutes)
+python auto_evaluation.py -m figures
+```
 
-### Debug Mode
+**Total Time**: Approximately **2 hours and 10 minutes**
 
-Enable detailed logging to debug issues:
+## Output Directories
 
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-``` 
+After running all three steps, you will have:
+
+1. **`results/`**: Contains all raw and processed experimental data
+   - Raw logs from testbed nodes
+   - Processed metrics files
+   - Intermediate data files
+
+2. **`figures/`**: Contains all generated figures in PDF format
+   - All figures from the paper (Figure 9-21)
+   - Ready for comparison with paper figures
+
+## License
+
+This artifact evaluation package is provided as supplementary material for the SMEC paper. Please refer to the main paper for citation information.
