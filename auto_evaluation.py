@@ -8,7 +8,10 @@ from src.get_results import (
     get_client_results,
 )
 from src.get_results import clean_results
-from src.preprocess_results import preprocess_smec_results
+from src.preprocess_results import (
+    preprocess_smec_results,
+    preprocess_scheduler_logs,
+)
 from visualization.figure_reproduce_static import (
     generate_figure_9,
     generate_figure_10,
@@ -338,17 +341,37 @@ def preprocess_mode():
     """Handle preprocess mode logic - preprocess SMEC results"""
     print("Running in preprocess mode...")
 
-    # List of SMEC result directories that need preprocessing
-    smec_dirs = [
-        "results/smec_all_tasks",
-        "results/smec_all_tasks_dynamic",
+    # List of SMEC result directories that need controller.log preprocessing
+    # smec_dirs = [
+    #     "results/smec_all_tasks",
+    #     "results/smec_all_tasks_dynamic",
+    # ]
+
+    # print("\n" + "=" * 60)
+    # print("PART 1: Processing Controller Logs (Remaining Time)")
+    # print("=" * 60)
+
+    # for results_dir in smec_dirs:
+    #     print(f"\n{'='*60}")
+    #     print(f"Processing: {results_dir}")
+    #     print(f"{'='*60}")
+    #     preprocess_smec_results(results_dir)
+
+    # List of directories that need scheduler.log preprocessing
+    scheduler_dirs = [
+        "results/smec_all_tasks_disable_32cpu",
+        "results/smec_all_tasks_dynamic_disable_32cpu",
     ]
 
-    for results_dir in smec_dirs:
+    print("\n" + "=" * 60)
+    print("PART 2: Processing Scheduler Logs (Waiting/Processing Time)")
+    print("=" * 60)
+
+    for results_dir in scheduler_dirs:
         print(f"\n{'='*60}")
         print(f"Processing: {results_dir}")
         print(f"{'='*60}")
-        preprocess_smec_results(results_dir)
+        preprocess_scheduler_logs(results_dir)
 
     print("\n" + "=" * 60)
     print("All preprocessing complete!")

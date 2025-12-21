@@ -245,3 +245,179 @@ def preprocess_smec_results(results_dir: str):
     print("- video-transcoding/server/: ue1, ue2")
     print("- video-od/server/: ue3, ue4")
     print("- video-sr/server/: ue5, ue6")
+
+
+def extract_waiting_time_info(log_file):
+    """
+    Extract waiting time information from scheduler log file.
+
+    Args:
+        log_file: Path to scheduler.log file
+
+    Returns:
+        dict: Dictionary mapping client_id to list of (request_id, waiting_time) tuples
+    """
+    pattern = (
+        r"Client id: (\d+) Request id: (\d+) Estimated Processing Time: (\d+)"
+        r" Estimated Processing Time2: (\d+) current_waiting_time: (\d+)"
+        r" median_processing_time: (\d+) median_response_waiting_time: (\d+)"
+    )
+
+    client_data = defaultdict(list)
+
+    with open(log_file, "r", encoding="utf-8") as f:
+        for line in f:
+            match = re.search(pattern, line)
+            if match:
+                client_id = int(match.group(1))
+                request_id = int(match.group(2))
+                current_waiting_time = int(match.group(5))
+
+                client_data[client_id].append(
+                    (request_id, current_waiting_time)
+                )
+
+    return client_data
+
+
+def extract_processing_time_info(log_file):
+    """
+    Extract processing time information from scheduler log file.
+
+    Args:
+        log_file: Path to scheduler.log file
+
+    Returns:
+        dict: Dictionary mapping client_id to list of (request_id, processing_time) tuples
+    """
+    pattern = (
+        r"Client id: (\d+) Request id: (\d+) Estimated Processing Time: (\d+)"
+    )
+
+    client_data = defaultdict(list)
+
+    with open(log_file, "r", encoding="utf-8") as f:
+        for line in f:
+            match = re.search(pattern, line)
+            if match:
+                client_id = int(match.group(1))
+                request_id = int(match.group(2))
+                processing_time = int(match.group(3))
+
+                client_data[client_id].append((request_id, processing_time))
+
+    return client_data
+
+
+def save_scheduler_data(client_data, results_dir, data_type="waiting"):
+    """
+    Save scheduler data to appropriate server directories.
+
+    Args:
+        client_data: Dictionary mapping client_id to list of data tuples
+        results_dir: Base results directory
+        data_type: Type of data ('waiting' or 'processing')
+    """
+    # Client mapping: 1,2 -> video-transcoding, 3,4 -> video-od, 5,6 -> video-sr
+    client_mapping = {
+        1: "video-transcoding",
+        2: "video-transcoding",
+        3: "video-od",
+        4: "video-od",
+        5: "video-sr",
+        6: "video-sr",
+    }
+
+    for client_id, data in client_data.items():
+        if client_id in client_mapping:
+            app_folder = client_mapping[client_id]
+            server_dir = os.path.join(results_dir, app_folder, "server")
+
+            # Create server directory if it doesn't exist
+            os.makedirs(server_dir, exist_ok=True)
+
+            # Determine filename based on data type
+            if data_type == "waiting":
+                filename = os.path.join(
+                    server_dir, f"waiting_client{client_id:03d}.txt"
+                )
+            else:  # processing
+                filename = os.path.join(
+                    server_dir, f"processing_client{client_id:04d}.txt"
+                )
+
+            # Sort by request ID
+            data.sort(key=lambda x: x[0])
+
+            with open(filename, "w", encoding="utf-8") as f:
+                if data_type == "processing":
+                    f.write(f"{'frame_index':<12}{'processing_time':<15}\n")
+
+                for request_id, value in data:
+                    if data_type == "waiting":
+                        f.write(f"{request_id}\t{value}\n")
+                    else:  # processing
+                        f.write(f"{request_id:<12}{value:<15}\n")
+
+            print(f"Created {filename} with {len(data)} entries")
+
+
+def preprocess_scheduler_logs(results_dir):
+    """
+    Preprocess scheduler logs by extracting waiting time and processing time information.
+
+    Args:
+        results_dir: Path to the results directory containing scheduler.log
+    """
+    scheduler_log = os.path.join(results_dir, "scheduler.log")
+
+    if not os.path.exists(scheduler_log):
+        print(f"Error: scheduler.log not found at {scheduler_log}")
+        return
+
+    print(f"Processing scheduler log from: {scheduler_log}")
+
+    # Extract waiting time information
+    print("\nExtracting waiting time information...")
+    waiting_data = extract_waiting_time_info(scheduler_log)
+
+    # Extract processing time information
+    print("Extracting processing time information...")
+    processing_data = extract_processing_time_info(scheduler_log)
+
+    # Print summary
+    print("\nData extraction summary:")
+    print("-" * 40)
+    for client_id in sorted(
+        set(waiting_data.keys()) | set(processing_data.keys())
+    ):
+        waiting_count = len(waiting_data.get(client_id, []))
+        processing_count = len(processing_data.get(client_id, []))
+        print(
+            f"Client {client_id}: {waiting_count} waiting records,"
+            f" {processing_count} processing records"
+        )
+
+    # Save data to server folders
+    print("\nSaving waiting time data to server folders...")
+    save_scheduler_data(waiting_data, results_dir, "waiting")
+
+    print("\nSaving processing time data to server folders...")
+    save_scheduler_data(processing_data, results_dir, "processing")
+
+    print("\nScheduler log preprocessing complete!")
+    print("Files saved in respective server folders:")
+    print("- video-transcoding/server/: client 1, 2")
+    print("- video-od/server/: client 3, 4")
+    print("- video-sr/server/: client 5, 6")
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) > 1:
+        results_dir = sys.argv[1]
+    else:
+        results_dir = "results/smec_all_tasks"
+
+    preprocess_smec_results(results_dir)
