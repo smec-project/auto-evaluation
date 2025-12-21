@@ -60,7 +60,7 @@ def collect_processing_time_for_method_app(
 
         # Get server 2560x1440 files and sort by timestamp
         process_files_2560 = glob.glob(
-            os.path.join(server_dir, "process_2560x1440_*_pipeline.txt")
+            os.path.join(server_dir, "process_2560x1440_*.txt")
         )
         process_files_with_ts = []
         for f in process_files_2560:
@@ -566,6 +566,236 @@ def generate_figure_18_a(results_base_path, output_dir):
     plt.close()
 
 
+def generate_figure_18_b(results_base_path, output_dir):
+    """
+    Generate Figure 18-b: Processing time CDF for Default, PARTIES, and SMEC (Dynamic Workload)
+
+    Args:
+        results_base_path: Base path to results directory
+        output_dir: Output directory for saving figures
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Define methods and their directory names (dynamic workload)
+    method_dirs = {
+        "default": os.path.join(
+            results_base_path, "smec_all_tasks_dynamic_disable"
+        ),
+        "parties": os.path.join(
+            results_base_path, "smec_all_tasks_dynamic_rtt"
+        ),
+        "smec": os.path.join(results_base_path, "smec_all_tasks_dynamic"),
+    }
+
+    # Define applications
+    apps = ["video-transcoding", "video-od", "video-sr"]
+
+    # Color and style configuration
+    plot_configs = {
+        "smec": {
+            "color": "#ff7f0e",
+            "linestyle": "--",
+            "marker": "s",
+            "markevery": 200,
+        },  # orange dashed
+        "parties": {
+            "color": "#9467bd",
+            "linestyle": ":",
+            "marker": "v",
+            "markevery": 200,
+        },  # purple dotted
+        "default": {
+            "color": "#1f77b4",
+            "linestyle": "-",
+            "marker": "o",
+            "markevery": 200,
+        },  # blue solid
+    }
+
+    legend_labels = {"smec": "SMEC", "parties": "PARTIES", "default": "Default"}
+
+    app_titles = {"video-od": "AR", "video-sr": "VC", "video-transcoding": "SS"}
+
+    # Store data for all apps
+    all_app_data = {}
+
+    # Process each app
+    for app_name in apps:
+        print(f"\n=== Processing {app_name} ===")
+        all_app_data[app_name] = {}
+
+        # Process each method for this app
+        for method_key, method_dir in method_dirs.items():
+            if os.path.exists(method_dir):
+                print(f"  Processing method: {method_key}")
+                processing_times = collect_processing_time_for_method_app(
+                    method_dir, app_name
+                )
+
+                if processing_times:
+                    all_app_data[app_name][method_key] = processing_times
+
+                    # Print statistics
+                    print(f"    Statistics for {method_key}:")
+                    print(f"      - Mean: {np.mean(processing_times):.2f} ms")
+                    print(
+                        f"      - Median: {np.median(processing_times):.2f} ms"
+                    )
+                    print(
+                        "      - 95th percentile:"
+                        f" {np.percentile(processing_times, 95):.2f} ms"
+                    )
+                    print(
+                        "      - 99th percentile:"
+                        f" {np.percentile(processing_times, 99):.2f} ms"
+                    )
+                else:
+                    print(f"    No data found for {method_key}")
+            else:
+                print(f"  Method directory not found: {method_dir}")
+
+    # Create combined plot with all three apps as subplots
+    print(f"\n=== Creating Figure 18-b plot ===")
+
+    fig, axes = plt.subplots(1, 3, figsize=(21, 6.5), sharey=True)
+
+    # Try to use seaborn style
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    for app_idx, app_name in enumerate(apps):
+        ax = axes[app_idx]
+
+        # Plot each method for this app
+        for method in ["default", "parties", "smec"]:
+            if (
+                method in all_app_data[app_name]
+                and all_app_data[app_name][method]
+            ):
+                processing_times = all_app_data[app_name][method]
+                sorted_data, cdf_values = calculate_cdf(processing_times)
+
+                ax.plot(
+                    sorted_data,
+                    cdf_values,
+                    color=plot_configs[method]["color"],
+                    linestyle=plot_configs[method]["linestyle"],
+                    linewidth=6,
+                    label=legend_labels[method],
+                    alpha=0.9,
+                    marker=plot_configs[method]["marker"],
+                    markevery=plot_configs[method]["markevery"],
+                    markersize=12,
+                    markerfacecolor="white",
+                    markeredgewidth=3,
+                    markeredgecolor=plot_configs[method]["color"],
+                )
+
+        # Customize subplot
+        ax.set_xlabel(f"{app_titles[app_name]}", fontsize=52, color="#333333")
+
+        # Set axis properties
+        ax.set_ylim(0, 1.05)
+        ax.set_xlim(left=0)
+
+        # Enhanced grid and styling
+        ax.grid(True, alpha=0.4, linestyle="--", linewidth=0.8, color="#cccccc")
+        ax.set_facecolor("#fafafa")
+
+        # Enhanced ticks
+        ax.tick_params(
+            axis="both",
+            which="major",
+            labelsize=52,
+            colors="#333333",
+            width=2,
+            length=8,
+        )
+
+        # Enhanced spines
+        for spine in ax.spines.values():
+            spine.set_linewidth(2.5)
+            spine.set_color("#333333")
+
+        # Add SLO vertical lines
+        slo_values = {
+            "video-od": 100,
+            "video-sr": 150,
+            "video-transcoding": 100,
+        }
+        if app_name in slo_values:
+            ax.axvline(
+                x=slo_values[app_name],
+                color="#d62728",
+                linestyle=":",
+                linewidth=8,
+                alpha=0.8,
+                zorder=5,
+            )
+
+        # Set custom ticks
+        import matplotlib.ticker as ticker
+
+        ax.yaxis.set_major_locator(ticker.FixedLocator([0, 0.5, 1.0]))
+
+        # Set x-axis ticks
+        if app_name == "video-sr":
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(200))
+        else:
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(100))
+
+    # Set y-axis label only for the leftmost subplot
+    axes[0].set_ylabel("CDF", fontsize=52, color="#333333")
+
+    # Create a single shared legend
+    handles, labels = axes[0].get_legend_handles_labels()
+
+    # Add SLO to legend
+    slo_line = plt.Line2D(
+        [0], [0], color="#d62728", linestyle=":", linewidth=8, alpha=0.8
+    )
+    handles.append(slo_line)
+    labels.append("SLO")
+
+    # Place legend at the top center of the entire figure
+    fig.legend(
+        handles,
+        labels,
+        fontsize=47,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        bbox_to_anchor=(0.53, 1.08),
+        loc="center",
+        ncol=4,
+        framealpha=0.95,
+        edgecolor="#333333",
+        facecolor="white",
+        columnspacing=0.8,
+        handletextpad=0.3,
+    )
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Save plot (PDF only)
+    output_path_pdf = os.path.join(output_dir, "figure_18_b.pdf")
+    plt.savefig(
+        output_path_pdf, dpi=300, bbox_inches="tight", facecolor="white"
+    )
+
+    print(f"\nFigure 18-b saved as: {output_path_pdf}")
+
+    # Close the figure
+    plt.close()
+
+
 def main():
     """Main function to generate microbenchmark figures"""
     # Set base path to results directory
@@ -585,6 +815,11 @@ def main():
         print("\n=== Generating Figure 18-a ===")
         generate_figure_18_a(base_path, output_dir)
         print("\nFigure 18-a generated successfully!")
+
+        # Generate Figure 18-b
+        print("\n=== Generating Figure 18-b ===")
+        generate_figure_18_b(base_path, output_dir)
+        print("\nFigure 18-b generated successfully!")
 
     except Exception as e:
         print(f"Error: {e}")
