@@ -794,39 +794,3 @@ def generate_figure_18_b(results_base_path, output_dir):
 
     # Close the figure
     plt.close()
-
-
-def main():
-    """Main function to generate microbenchmark figures"""
-    # Set base path to results directory
-    base_path = "results"
-    output_dir = "figures"
-
-    print(f"=== Microbenchmark Figures Generation ===")
-    print(f"Base path: {base_path}")
-    print(f"Output directory: {output_dir}")
-
-    if not os.path.exists(base_path):
-        print(f"Base path {base_path} does not exist!")
-        return
-
-    try:
-        # Generate Figure 18-a
-        print("\n=== Generating Figure 18-a ===")
-        generate_figure_18_a(base_path, output_dir)
-        print("\nFigure 18-a generated successfully!")
-
-        # Generate Figure 18-b
-        print("\n=== Generating Figure 18-b ===")
-        generate_figure_18_b(base_path, output_dir)
-        print("\nFigure 18-b generated successfully!")
-
-    except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-
-        traceback.print_exc()
-
-
-if __name__ == "__main__":
-    main()
