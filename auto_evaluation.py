@@ -343,20 +343,20 @@ def preprocess_mode():
     print("Running in preprocess mode...")
 
     # List of SMEC result directories that need controller.log preprocessing
-    # smec_dirs = [
-    #     "results/smec_all_tasks",
-    #     "results/smec_all_tasks_dynamic",
-    # ]
+    smec_dirs = [
+        "results/smec_all_tasks",
+        "results/smec_all_tasks_dynamic",
+    ]
 
-    # print("\n" + "=" * 60)
-    # print("PART 1: Processing Controller Logs (Remaining Time)")
-    # print("=" * 60)
+    print("\n" + "=" * 60)
+    print("PART 1: Processing Controller Logs (Remaining Time)")
+    print("=" * 60)
 
-    # for results_dir in smec_dirs:
-    #     print(f"\n{'='*60}")
-    #     print(f"Processing: {results_dir}")
-    #     print(f"{'='*60}")
-    #     preprocess_smec_results(results_dir)
+    for results_dir in smec_dirs:
+        print(f"\n{'='*60}")
+        print(f"Processing: {results_dir}")
+        print(f"{'='*60}")
+        preprocess_smec_results(results_dir)
 
     # List of directories that need scheduler.log preprocessing
     scheduler_dirs = [
@@ -387,73 +387,80 @@ def figures_mode():
     results_base_path = "results"
     output_dir = "figures"
 
-    # # Generate Figure 9
-    # print("\n=== Generating Figure 9 ===")
-    # generate_figure_9(results_base_path, output_dir)
+    # Generate Figure 9
+    print("\n=== Generating Figure 9 ===")
+    generate_figure_9(results_base_path, output_dir)
+    print("\nFigure 9 generated successfully!")
 
-    # # Generate Figure 10
-    # print("\n=== Generating Figure 10 ===")
-    # generate_figure_10(results_base_path, output_dir)
+    # Generate Figure 10
+    print("\n=== Generating Figure 10 ===")
+    generate_figure_10(results_base_path, output_dir)
+    print("\nFigure 10 generated successfully!")
 
-    # # Generate Figure 11
-    # print("\n=== Generating Figure 11 ===")
-    # generate_figure_11(results_base_path, output_dir)
+    # Generate Figure 11
+    print("\n=== Generating Figure 11 ===")
+    generate_figure_11(results_base_path, output_dir)
+    print("\nFigure 11 generated successfully!")
 
-    # # Generate Figure 12
-    # print("\n=== Generating Figure 12 ===")
-    # generate_figure_12(results_base_path, output_dir)
+    # Generate Figure 12
+    print("\n=== Generating Figure 12 ===")
+    generate_figure_12(results_base_path, output_dir)
+    print("\nFigure 12 generated successfully!")
 
-    # # Generate Figure 13
-    # print("\n=== Generating Figure 13 ===")
-    # generate_figure_13(results_base_path, output_dir)
+    # Generate Figure 13
+    print("\n=== Generating Figure 13 ===")
+    generate_figure_13(results_base_path, output_dir)
+    print("\nFigure 13 generated successfully!")
 
-    # # Generate Figure 14
-    # print("\n=== Generating Figure 14 ===")
-    # generate_figure_14(results_base_path, output_dir)
+    # Generate Figure 14
+    print("\n=== Generating Figure 14 ===")
+    generate_figure_14(results_base_path, output_dir)
+    print("\nFigure 14 generated successfully!")
 
-    # # Generate Figure 15
-    # print("\n=== Generating Figure 15 ===")
-    # generate_figure_15(results_base_path, output_dir)
+    # Generate Figure 15
+    print("\n=== Generating Figure 15 ===")
+    generate_figure_15(results_base_path, output_dir)
+    print("\nFigure 15 generated successfully!")
 
-    # # Generate Figure 16
-    # print("\n=== Generating Figure 16 ===")
-    # generate_figure_16(results_base_path, output_dir)
-    # print("\nAll figures generated successfully!")
+    # Generate Figure 16
+    print("\n=== Generating Figure 16 ===")
+    generate_figure_16(results_base_path, output_dir)
+    print("\nFigure 16 generated successfully!")
 
-    # # Generate Figure 17
-    # print("\n=== Generating Figure 17 ===")
-    # generate_figure_17(results_base_path, output_dir)
-    # print("\nAll figures generated successfully!")
+    # Generate Figure 17
+    print("\n=== Generating Figure 17 ===")
+    generate_figure_17(results_base_path, output_dir)
+    print("\nFigure 17 generated successfully!")
 
-    # # Generate Figure 18a
-    # print("\n=== Generating Figure 18a ===")
-    # generate_figure_18_a(results_base_path, output_dir)
-    # print("\nAll figures generated successfully!")
+    # Generate Figure 18a
+    print("\n=== Generating Figure 18a ===")
+    generate_figure_18_a(results_base_path, output_dir)
+    print("\nFigure 18a generated successfully!")
 
-    # # Generate Figure 18b
-    # print("\n=== Generating Figure 18b ===")
-    # generate_figure_18_b(results_base_path, output_dir)
-    # print("\nAll figures generated successfully!")
+    # Generate Figure 18b
+    print("\n=== Generating Figure 18b ===")
+    generate_figure_18_b(results_base_path, output_dir)
+    print("\nFigure 18b generated successfully!")
 
-    # # Generate Figure 19
-    # print("\n=== Generating Figure 19 ===")
-    # generate_figure_19(results_base_path, output_dir)
-    # print("\nFigure 19 generated successfully!")
+    # Generate Figure 19
+    print("\n=== Generating Figure 19 ===")
+    generate_figure_19(results_base_path, output_dir)
+    print("\nFigure 19 generated successfully!")
 
-    # # Generate Figure 20a
-    # print("\n=== Generating Figure 20a ===")
-    # generate_figure_20_a(results_base_path, output_dir)
-    # print("\nFigure 20a generated successfully!")
+    # Generate Figure 20a
+    print("\n=== Generating Figure 20a ===")
+    generate_figure_20_a(results_base_path, output_dir)
+    print("\nFigure 20a generated successfully!")
 
     # Generate Figure 20b
     print("\n=== Generating Figure 20b ===")
     generate_figure_20_b(results_base_path, output_dir)
-    print("\nAll figures generated successfully!")
+    print("\nFigure 20b generated successfully!")
 
-    # # Generate Figure 21
-    # print("\n=== Generating Figure 21 ===")
-    # generate_figure_21(results_base_path, output_dir)
-    # print("\nAll figures generated successfully!")
+    # Generate Figure 21
+    print("\n=== Generating Figure 21 ===")
+    generate_figure_21(results_base_path, output_dir)
+    print("\nFigure 21 generated successfully!")
 
 
 def main():
