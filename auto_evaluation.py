@@ -8,11 +8,17 @@ from src.get_results import (
     get_client_results,
 )
 from src.get_results import clean_results
-from src.figure_reproduce import (
+from src.figure_reproduce_static import (
     generate_figure_9,
     generate_figure_10,
     generate_figure_11,
     generate_figure_12,
+)
+from src.figure_reproduce_dynamic import (
+    generate_figure_13,
+    generate_figure_14,
+    generate_figure_15,
+    generate_figure_16,
 )
 
 
@@ -323,22 +329,37 @@ def figures_mode():
     results_base_path = "results"
     output_dir = "figures"
 
-    # Generate Figure 9
-    print("\n=== Generating Figure 9 ===")
-    generate_figure_9(results_base_path, output_dir)
+    # # Generate Figure 9
+    # print("\n=== Generating Figure 9 ===")
+    # generate_figure_9(results_base_path, output_dir)
 
-    # Generate Figure 10
-    print("\n=== Generating Figure 10 ===")
-    generate_figure_10(results_base_path, output_dir)
+    # # Generate Figure 10
+    # print("\n=== Generating Figure 10 ===")
+    # generate_figure_10(results_base_path, output_dir)
 
-    # Generate Figure 11
-    print("\n=== Generating Figure 11 ===")
-    generate_figure_11(results_base_path, output_dir)
+    # # Generate Figure 11
+    # print("\n=== Generating Figure 11 ===")
+    # generate_figure_11(results_base_path, output_dir)
 
-    # Generate Figure 12
-    print("\n=== Generating Figure 12 ===")
-    generate_figure_12(results_base_path, output_dir)
+    # # Generate Figure 12
+    # print("\n=== Generating Figure 12 ===")
+    # generate_figure_12(results_base_path, output_dir)
 
+    # # Generate Figure 13
+    # print("\n=== Generating Figure 13 ===")
+    # generate_figure_13(results_base_path, output_dir)
+
+    # # Generate Figure 14
+    # print("\n=== Generating Figure 14 ===")
+    # generate_figure_14(results_base_path, output_dir)
+
+    # Generate Figure 15
+    print("\n=== Generating Figure 15 ===")
+    generate_figure_15(results_base_path, output_dir)
+
+    # Generate Figure 16
+    print("\n=== Generating Figure 16 ===")
+    generate_figure_16(results_base_path, output_dir)
     print("\nAll figures generated successfully!")
 
 
