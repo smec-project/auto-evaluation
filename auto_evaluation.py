@@ -1,6 +1,8 @@
 import argparse
+import sys
 from time import sleep
 from src.run_experiment import run_experiment
+from src.host_manager import HostManager
 from src.get_results import (
     get_ran_logs,
     get_scheduler_logs,
@@ -463,6 +465,22 @@ def figures_mode():
     print("\nFigure 21 generated successfully!")
 
 
+def test_mode():
+    """Test SSH connectivity to all configured hosts."""
+    print("Running in test mode (SSH connection test)...")
+    manager = HostManager("hosts_config.yaml")
+    results = manager.test_connections()
+
+    all_ok = True
+    for host, ok in results.items():
+        status = "OK" if ok else "FAIL"
+        print(f"{host}: {status}")
+        all_ok = all_ok and ok
+
+    if not all_ok:
+        sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Auto Evaluation Tool")
     parser.add_argument(
@@ -470,8 +488,8 @@ def main():
         "--mode",
         type=str,
         required=True,
-        choices=["data", "figures", "preprocess"],
-        help="Operation mode: data | figures | preprocess",
+        choices=["data", "figures", "preprocess", "test"],
+        help="Operation mode: data | figures | preprocess | test",
     )
 
     args = parser.parse_args()
@@ -482,6 +500,8 @@ def main():
         figures_mode()
     elif args.mode == "preprocess":
         preprocess_mode()
+    elif args.mode == "test":
+        test_mode()
 
 
 if __name__ == "__main__":

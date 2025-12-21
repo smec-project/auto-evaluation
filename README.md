@@ -89,7 +89,7 @@ key_filename: /home/yourname/.ssh/id_rsa_utns
 Test your SSH connections before running experiments:
 
 ```bash
-python src/host_manager.py --test-connections
+python3 auto_evaluation.py -m test
 ```
 
 This will verify that all configured hosts are reachable.
