@@ -887,3 +887,525 @@ if __name__ == "__main__":
     print("=== Generating Figure 19: Remaining Time Error ===")
     generate_figure_19(results_base_path, output_dir)
     print("\nFigure 19 generation complete!")
+
+
+def collect_processing_time_differences_ss(
+    base_path, skip_lines=100, skip_tail=5
+):
+    """
+    Collect SS (video transcoding) processing time differences.
+
+    Args:
+        base_path: Base path to the server directory
+        skip_lines: Number of lines to skip from beginning
+        skip_tail: Number of lines to skip from end
+
+    Returns:
+        list: Processing time differences in milliseconds
+    """
+    differences = []
+
+    # Find processing and process files (only 2560 for SS)
+    processing_files = glob.glob(
+        os.path.join(
+            base_path, "video-transcoding/server/processing_client*.txt"
+        )
+    )
+    process_files = glob.glob(
+        os.path.join(base_path, "video-transcoding/server/process_2560*.txt")
+    )
+
+    # Filter for clients 1,2
+    processing_files = [
+        f for f in processing_files if "client0001" in f or "client0002" in f
+    ]
+    processing_files.sort()
+    process_files.sort()
+
+    print(
+        f"  SS: Found {len(processing_files)} processing files and"
+        f" {len(process_files)} process files"
+    )
+
+    for processing_file, process_file in zip(processing_files, process_files):
+        try:
+            # Read processing data (expected times)
+            processing_df = pd.read_csv(processing_file, sep=r"\s+")
+            processing_df.columns = ["frame_index", "processing_time"]
+
+            # Read process data (actual times)
+            process_df = pd.read_csv(process_file, sep=r"\s+", skiprows=1)
+            process_df.columns = [
+                "Frame",
+                "Decode_Time",
+                "Transcode_Time",
+                "Encode_Time",
+                "Total_Time",
+                "Network_Delay",
+            ]
+
+            # Merge on frame
+            merged = pd.merge(
+                processing_df,
+                process_df,
+                left_on="frame_index",
+                right_on="Frame",
+                how="inner",
+            )
+
+            # Apply filtering: skip head and tail
+            if len(merged) > skip_lines + skip_tail:
+                merged = merged.iloc[skip_lines:-skip_tail]
+
+            # Calculate difference: expected - actual (in milliseconds)
+            merged["expected_ms"] = merged["processing_time"] / 1000
+            merged["actual_ms"] = merged["Total_Time"]
+            merged["difference"] = merged["expected_ms"] - merged["actual_ms"]
+
+            differences.extend(merged["difference"].tolist())
+
+            print(
+                f"    Collected {len(merged)} differences from"
+                f" {os.path.basename(processing_file)}"
+            )
+
+        except Exception as e:
+            print(
+                f"    Error processing {os.path.basename(processing_file)}: {e}"
+            )
+
+    return differences
+
+
+def collect_processing_time_differences_ar(
+    base_path, skip_lines=100, skip_tail=5
+):
+    """
+    Collect AR processing time differences.
+
+    Args:
+        base_path: Base path to the server directory
+        skip_lines: Number of lines to skip from beginning
+        skip_tail: Number of lines to skip from end
+
+    Returns:
+        list: Processing time differences in milliseconds
+    """
+    differences = []
+
+    # Find processing and process files
+    processing_files = glob.glob(
+        os.path.join(base_path, "video-od/server/processing_client*.txt")
+    )
+    process_files = glob.glob(
+        os.path.join(base_path, "video-od/server/process_*.txt")
+    )
+
+    # Filter for clients 3,4
+    processing_files = [
+        f for f in processing_files if "client0003" in f or "client0004" in f
+    ]
+    processing_files.sort()
+
+    print(
+        f"  AR: Found {len(processing_files)} processing files and"
+        f" {len(process_files)} process files"
+    )
+
+    if len(process_files) != 1:
+        print("  AR: Expected exactly 1 process file")
+        return differences
+
+    try:
+        # Read the single process file
+        process_file = process_files[0]
+        process_df = pd.read_csv(process_file, sep=r"\s+", skiprows=1)
+        process_df.columns = [
+            "Stream",
+            "Frame",
+            "Network_YOLO",
+            "YOLO",
+            "YOLO_Response",
+            "Total",
+            "Detections",
+            "CUDA_Priority",
+            "Network_Delay",
+        ]
+
+        # Get unique stream IDs and sort them
+        unique_streams = sorted(process_df["Stream"].unique())
+
+        for i, processing_file in enumerate(processing_files):
+            if i >= len(unique_streams):
+                break
+
+            try:
+                # Read processing data (expected times)
+                processing_df = pd.read_csv(processing_file, sep=r"\s+")
+                processing_df.columns = ["frame_index", "processing_time"]
+
+                # Get target stream for this client
+                target_stream = unique_streams[i]
+                stream_process_df = process_df[
+                    process_df["Stream"] == target_stream
+                ].copy()
+
+                # Merge on frame
+                merged = pd.merge(
+                    processing_df,
+                    stream_process_df,
+                    left_on="frame_index",
+                    right_on="Frame",
+                    how="inner",
+                )
+
+                # Apply filtering: skip head and tail
+                if len(merged) > skip_lines + skip_tail:
+                    merged = merged.iloc[skip_lines:-skip_tail]
+
+                # Calculate difference: expected - actual (in milliseconds)
+                merged["expected_ms"] = merged["processing_time"] / 1000
+                merged["actual_ms"] = merged["Total"]
+                merged["difference"] = (
+                    merged["expected_ms"] - merged["actual_ms"]
+                )
+
+                differences.extend(merged["difference"].tolist())
+
+                print(
+                    f"    Collected {len(merged)} differences from"
+                    f" {os.path.basename(processing_file)}"
+                )
+
+            except Exception as e:
+                print(f"    Error processing AR client {3 + i}: {e}")
+
+    except Exception as e:
+        print(f"    Error processing AR data: {e}")
+
+    return differences
+
+
+def collect_processing_time_differences_vc(
+    base_path, skip_lines=100, skip_tail=5
+):
+    """
+    Collect VC (SR) processing time differences.
+
+    Args:
+        base_path: Base path to the server directory
+        skip_lines: Number of lines to skip from beginning
+        skip_tail: Number of lines to skip from end
+
+    Returns:
+        list: Processing time differences in milliseconds
+    """
+    differences = []
+
+    # Find processing and process files
+    processing_files = glob.glob(
+        os.path.join(base_path, "video-sr/server/processing_client*.txt")
+    )
+    process_files = glob.glob(
+        os.path.join(base_path, "video-sr/server/process_*.txt")
+    )
+
+    # Filter for clients 5,6
+    processing_files = [
+        f for f in processing_files if "client0005" in f or "client0006" in f
+    ]
+    processing_files.sort()
+
+    print(
+        f"  VC: Found {len(processing_files)} processing files and"
+        f" {len(process_files)} process files"
+    )
+
+    if len(process_files) != 1:
+        print("  VC: Expected exactly 1 process file")
+        return differences
+
+    try:
+        # Read the single process file
+        process_file = process_files[0]
+        process_df = pd.read_csv(process_file, sep=r"\s+", skiprows=1)
+        process_df.columns = [
+            "Stream",
+            "Frame",
+            "Network_SR",
+            "SR",
+            "SR_Response",
+            "Total",
+            "Priority",
+            "Network_Delay",
+        ]
+
+        # Get unique stream IDs and sort them
+        unique_streams = sorted(process_df["Stream"].unique())
+
+        for i, processing_file in enumerate(processing_files):
+            if i >= len(unique_streams):
+                break
+
+            try:
+                # Read processing data (expected times)
+                processing_df = pd.read_csv(processing_file, sep=r"\s+")
+                processing_df.columns = ["frame_index", "processing_time"]
+
+                # Map client to stream
+                target_stream = unique_streams[i]
+                stream_process_df = process_df[
+                    process_df["Stream"] == target_stream
+                ].copy()
+
+                # Merge on frame
+                merged = pd.merge(
+                    processing_df,
+                    stream_process_df,
+                    left_on="frame_index",
+                    right_on="Frame",
+                    how="inner",
+                )
+
+                # Apply filtering: skip head and tail
+                if len(merged) > skip_lines + skip_tail:
+                    merged = merged.iloc[skip_lines:-skip_tail]
+
+                # Calculate difference: expected - actual (in milliseconds)
+                merged["expected_ms"] = merged["processing_time"] / 1000
+                merged["actual_ms"] = merged["Total"]
+                merged["difference"] = (
+                    merged["expected_ms"] - merged["actual_ms"]
+                )
+
+                differences.extend(merged["difference"].tolist())
+
+                print(
+                    f"    Collected {len(merged)} differences from"
+                    f" {os.path.basename(processing_file)}"
+                )
+
+            except Exception as e:
+                print(f"    Error processing VC client {5 + i}: {e}")
+
+    except Exception as e:
+        print(f"    Error processing VC data: {e}")
+
+    return differences
+
+
+def generate_figure_20_b(results_base_path, output_dir):
+    """
+    Generate Figure 20_b: Processing time estimation error comparison
+
+    Args:
+        results_base_path: Base path to results directory
+        output_dir: Output directory for saving figures
+    """
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    print("=== Collecting processing time estimation error data ===")
+
+    # Define workloads
+    workloads = {
+        "smec_all_tasks_disable_32cpu": "Static",
+        "smec_all_tasks_dynamic_disable_32cpu": "Dynamic",
+    }
+
+    # Define applications
+    applications = ["SS", "AR", "VC"]
+
+    # Store all data
+    all_data = {}
+
+    for workload_dir, workload_name in workloads.items():
+        print(f"\nProcessing {workload_name} Workload ({workload_dir})...")
+        workload_path = os.path.join(results_base_path, workload_dir)
+
+        all_data[workload_name] = {}
+
+        # Collect SS data
+        print("  Processing SS (video-transcoding)...")
+        ss_errors = collect_processing_time_differences_ss(
+            workload_path, skip_lines=100, skip_tail=5
+        )
+        if ss_errors:
+            all_data[workload_name]["SS"] = ss_errors
+            print(f"    Total: {len(ss_errors)} errors")
+            print(f"    Mean: {np.mean(ss_errors):.2f} ms")
+            print(f"    Median: {np.median(ss_errors):.2f} ms")
+
+        # Collect AR data
+        print("  Processing AR (video-od)...")
+        ar_errors = collect_processing_time_differences_ar(
+            workload_path, skip_lines=100, skip_tail=5
+        )
+        if ar_errors:
+            all_data[workload_name]["AR"] = ar_errors
+            print(f"    Total: {len(ar_errors)} errors")
+            print(f"    Mean: {np.mean(ar_errors):.2f} ms")
+            print(f"    Median: {np.median(ar_errors):.2f} ms")
+
+        # Collect VC data
+        print("  Processing VC (video-sr)...")
+        vc_errors = collect_processing_time_differences_vc(
+            workload_path, skip_lines=100, skip_tail=5
+        )
+        if vc_errors:
+            all_data[workload_name]["VC"] = vc_errors
+            print(f"    Total: {len(vc_errors)} errors")
+            print(f"    Mean: {np.mean(vc_errors):.2f} ms")
+            print(f"    Median: {np.median(vc_errors):.2f} ms")
+
+    # Create the box plot
+    print("\n=== Creating Figure 20_b: Processing Time Error Box Plot ===")
+
+    plt.figure(figsize=(10, 5.5))
+
+    # Set font properties
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Arial", "sans-serif"]
+    plt.rcParams["font.weight"] = "normal"
+
+    # Set style
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    # Define application order and colors
+    app_order = ["SS", "AR", "VC"]
+    app_colors = {"AR": "#1f77b4", "SS": "#2ca02c", "VC": "#ff7f0e"}
+
+    # Prepare data for grouped box plot
+    workload_list = ["Static", "Dynamic"]
+    n_workloads = len(workload_list)
+    n_apps = len(app_order)
+
+    # Calculate positions for grouped boxes
+    box_width = 0.25
+    box_spacing = 0.05
+    group_spacing = 0.8
+
+    # Create positions for each workload group
+    workload_positions = np.arange(n_workloads) * (
+        n_apps * (box_width + box_spacing) + group_spacing
+    )
+
+    all_positions = []
+    all_box_data = []
+    all_colors = []
+
+    for i, workload in enumerate(workload_list):
+        if workload in all_data:
+            workload_data = all_data[workload]
+
+            for j, app in enumerate(app_order):
+                if app in workload_data:
+                    # Filter data to -100 to 100 range for better visualization
+                    filtered_data = [
+                        x for x in workload_data[app] if -100 <= x <= 100
+                    ]
+
+                    if filtered_data:
+                        position = workload_positions[i] + j * (
+                            box_width + box_spacing
+                        )
+                        all_positions.append(position)
+                        all_box_data.append(filtered_data)
+                        all_colors.append(app_colors[app])
+
+    # Create the grouped box plot
+    box_plot = plt.boxplot(
+        all_box_data,
+        positions=all_positions,
+        widths=box_width,
+        patch_artist=True,
+        showfliers=False,
+    )
+
+    # Color the boxes
+    for patch, color in zip(box_plot["boxes"], all_colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+
+    # Style the box plot elements
+    for element in ["whiskers", "medians", "caps"]:
+        plt.setp(box_plot[element], color="black", linewidth=1.5)
+
+    # Customize the plot
+    plt.ylabel("Error (ms)", fontsize=52, fontweight="500", color="#2c3e50")
+
+    # Set x-axis labels at the center of each workload group
+    group_centers = (
+        workload_positions
+        + (n_apps * (box_width + box_spacing) - box_spacing) / 2
+    )
+    plt.xticks(group_centers, workload_list, fontsize=46, color="#2c3e50")
+
+    # Set y-axis limits and styling
+    plt.ylim(-30, 50)
+    plt.yticks(np.arange(-25, 50, 25))
+    plt.tick_params(
+        axis="y",
+        which="major",
+        labelsize=48,
+        colors="#2c3e50",
+        width=1.5,
+        length=8,
+    )
+    plt.tick_params(
+        axis="x",
+        which="major",
+        labelsize=52,
+        colors="#2c3e50",
+        width=1.5,
+        length=8,
+    )
+
+    # Add horizontal line at y=0 for reference
+    plt.axhline(y=0, color="k", linestyle="--", alpha=0.5, linewidth=1)
+
+    # Enhanced grid
+    plt.grid(True, alpha=0.3, linestyle="-", linewidth=0.8, color="#bdc3c7")
+
+    # Create legend
+    from matplotlib.patches import Patch
+
+    legend_elements = [
+        Patch(facecolor=app_colors[app], alpha=0.7, label=app)
+        for app in app_order
+    ]
+    plt.legend(
+        handles=legend_elements,
+        fontsize=42,
+        frameon=False,
+        bbox_to_anchor=(0.5, 1.06),
+        loc="upper center",
+        ncol=2,
+    )
+
+    # Style enhancements
+    plt.gca().spines["top"].set_linewidth(2.5)
+    plt.gca().spines["top"].set_color("#333333")
+    plt.gca().spines["right"].set_linewidth(2.5)
+    plt.gca().spines["right"].set_color("#333333")
+    plt.gca().spines["left"].set_linewidth(2.5)
+    plt.gca().spines["left"].set_color("#333333")
+    plt.gca().spines["bottom"].set_linewidth(2.5)
+    plt.gca().spines["bottom"].set_color("#333333")
+
+    # Set background color
+    plt.gca().set_facecolor("#fafafa")
+
+    plt.tight_layout()
+
+    # Save the plot (PDF only)
+    output_path_pdf = os.path.join(output_dir, "figure_20_b.pdf")
+    plt.savefig(output_path_pdf, bbox_inches="tight", facecolor="white")
+
+    print(f"\nFigure 20_b saved as: {output_path_pdf}")
+    plt.close()
