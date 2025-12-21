@@ -1312,6 +1312,11 @@ def read_processing_time_data(
                     is_smec = "smec" in process_file.lower()
                     total_column = df.iloc[:, -2] if is_smec else df.iloc[:, -1]
 
+                    # For SMEC, last column is estimated network latency
+                    estimated_network_column = (
+                        df.iloc[:, -1] if is_smec else None
+                    )
+
                     for j in range(len(frame_column)):
                         try:
                             frame_num = int(frame_column.iloc[j])
@@ -1320,19 +1325,43 @@ def read_processing_time_data(
                                 .replace("ms", "")
                                 .strip()
                             )
-                            server_data_by_frame[frame_num] = total_time
+
+                            # For SMEC, also read estimated network latency
+                            estimated_network = None
+                            if is_smec and estimated_network_column is not None:
+                                estimated_network = float(
+                                    str(estimated_network_column.iloc[j])
+                                    .replace("ms", "")
+                                    .strip()
+                                )
+
+                            server_data_by_frame[frame_num] = (
+                                total_time,
+                                estimated_network,
+                            )
                         except (ValueError, AttributeError):
                             continue
             except Exception as e:
                 print(f"    Error reading server file: {e}")
                 continue
 
-            # Match and filter: only keep processing_time < e2e_latency
+            # Match and filter: only keep processing_time < e2e_latency and processing_time > 0
+            # For SMEC, also filter estimated_network_latency > 0
             for frame_num, e2e_latency in client_data_by_frame.items():
                 if frame_num in server_data_by_frame:
-                    processing_time = server_data_by_frame[frame_num]
-                    if processing_time < e2e_latency:
-                        all_processing_times.append(processing_time)
+                    processing_time, estimated_network = server_data_by_frame[
+                        frame_num
+                    ]
+
+                    # Check processing time is valid
+                    if processing_time > 0 and processing_time < e2e_latency:
+                        # For SMEC, also check estimated network latency
+                        if estimated_network is not None:
+                            if estimated_network > 0:
+                                all_processing_times.append(processing_time)
+                        else:
+                            # Not SMEC, no estimated network check needed
+                            all_processing_times.append(processing_time)
 
     else:  # video-od or video-sr
         # Use existing AR/SR matching logic from Figure 11
@@ -1376,6 +1405,11 @@ def read_processing_time_data(
                             df.iloc[:, -3] if is_smec else df.iloc[:, -1]
                         )
 
+                    # For SMEC, last column is estimated network latency
+                    estimated_network_column = (
+                        df.iloc[:, -1] if is_smec else None
+                    )
+
                     for j in range(len(stream_column)):
                         try:
                             stream_id = int(stream_column.iloc[j])
@@ -1385,8 +1419,21 @@ def read_processing_time_data(
                                 .replace("ms", "")
                                 .strip()
                             )
+
+                            # For SMEC, also read estimated network latency
+                            estimated_network = None
+                            if is_smec and estimated_network_column is not None:
+                                estimated_network = float(
+                                    str(estimated_network_column.iloc[j])
+                                    .replace("ms", "")
+                                    .strip()
+                                )
+
                             key = (stream_id, frame_num)
-                            server_data_by_stream_frame[key] = total_time
+                            server_data_by_stream_frame[key] = (
+                                total_time,
+                                estimated_network,
+                            )
                         except (ValueError, AttributeError):
                             continue
             except Exception as e:
@@ -1426,9 +1473,24 @@ def read_processing_time_data(
                     for frame_num, e2e_latency in zip(frames, latencies):
                         key = (stream_id, frame_num)
                         if key in server_data_by_stream_frame:
-                            processing_time = server_data_by_stream_frame[key]
-                            if processing_time < e2e_latency:
-                                all_processing_times.append(processing_time)
+                            processing_time, estimated_network = (
+                                server_data_by_stream_frame[key]
+                            )
+
+                            # Check processing time is valid
+                            if (
+                                processing_time > 0
+                                and processing_time < e2e_latency
+                            ):
+                                # For SMEC, also check estimated network latency
+                                if estimated_network is not None:
+                                    if estimated_network > 0:
+                                        all_processing_times.append(
+                                            processing_time
+                                        )
+                                else:
+                                    # Not SMEC, no estimated network check needed
+                                    all_processing_times.append(processing_time)
             except Exception as e:
                 print(f"    Error reading latency file: {e}")
 
