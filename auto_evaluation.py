@@ -8,6 +8,7 @@ from src.get_results import (
     get_client_results,
 )
 from src.get_results import clean_results
+from src.preprocess_results import preprocess_smec_results
 from visualization.figure_reproduce_static import (
     generate_figure_9,
     generate_figure_10,
@@ -330,6 +331,27 @@ def data_mode():
         print(f"Experiment failed with exit code: {exit_code}")
 
 
+def preprocess_mode():
+    """Handle preprocess mode logic - preprocess SMEC results"""
+    print("Running in preprocess mode...")
+
+    # List of SMEC result directories that need preprocessing
+    smec_dirs = [
+        "results/smec_all_tasks",
+        "results/smec_all_tasks_dynamic",
+    ]
+
+    for results_dir in smec_dirs:
+        print(f"\n{'='*60}")
+        print(f"Processing: {results_dir}")
+        print(f"{'='*60}")
+        preprocess_smec_results(results_dir)
+
+    print("\n" + "=" * 60)
+    print("All preprocessing complete!")
+    print("=" * 60)
+
+
 def figures_mode():
     """Handle figures mode logic - generate all paper figures"""
     print("Running in figures mode...")
@@ -404,8 +426,8 @@ def main():
         "--mode",
         type=str,
         required=True,
-        choices=["data", "figures"],
-        help="Operation mode: data | figures",
+        choices=["data", "figures", "preprocess"],
+        help="Operation mode: data | figures | preprocess",
     )
 
     args = parser.parse_args()
@@ -414,6 +436,8 @@ def main():
         data_mode()
     elif args.mode == "figures":
         figures_mode()
+    elif args.mode == "preprocess":
+        preprocess_mode()
 
 
 if __name__ == "__main__":
