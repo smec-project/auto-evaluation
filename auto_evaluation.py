@@ -23,6 +23,9 @@ from src.figure_reproduce_dynamic import (
 from src.figure_be_tp import (
     generate_figure_17,
 )
+from src.figure_microbench import (
+    generate_figure_18_a,
+)
 
 
 def data_mode():
@@ -365,9 +368,14 @@ def figures_mode():
     # generate_figure_16(results_base_path, output_dir)
     # print("\nAll figures generated successfully!")
 
-    # Generate Figure 17
-    print("\n=== Generating Figure 17 ===")
-    generate_figure_17(results_base_path, output_dir)
+    # # Generate Figure 17
+    # print("\n=== Generating Figure 17 ===")
+    # generate_figure_17(results_base_path, output_dir)
+    # print("\nAll figures generated successfully!")
+
+    # Generate Figure 18a
+    print("\n=== Generating Figure 18a ===")
+    generate_figure_18_a(results_base_path, output_dir)
     print("\nAll figures generated successfully!")
 
 
