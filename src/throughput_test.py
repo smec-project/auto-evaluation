@@ -16,6 +16,23 @@ from typing import Dict, Any, Optional
 from .host_manager import HostManager
 
 
+def to_mbps(value_str: str, unit: str) -> Optional[float]:
+    """Convert iperf3 bandwidth value + unit to Mbps."""
+    unit = unit.strip()
+    value = float(value_str)
+    multipliers = {
+        "bits/sec": 1e-6,
+        "Kbits/sec": 1e-3,
+        "Mbits/sec": 1,
+        "Gbits/sec": 1e3,
+        "Tbits/sec": 1e6,
+    }
+    for key, factor in multipliers.items():
+        if unit.lower() == key.lower():
+            return value * factor
+    return None
+
+
 class ThroughputTest:
     """Throughput test executor using iperf3."""
 
@@ -165,6 +182,7 @@ class ThroughputTest:
                         transferred_unit = match.group(4)
                         bandwidth = match.group(5)
                         bandwidth_unit = match.group(6)
+                        bandwidth_mbps = to_mbps(bandwidth, bandwidth_unit)
 
                         results["intervals"].append(
                             {
@@ -174,6 +192,7 @@ class ThroughputTest:
                                     f"{transferred} {transferred_unit}"
                                 ),
                                 "bandwidth": f"{bandwidth} {bandwidth_unit}",
+                                "bandwidth_mbps": bandwidth_mbps,
                             }
                         )
 
@@ -198,15 +217,12 @@ class ThroughputTest:
                 # Extract numeric bandwidth values for averaging
                 bandwidth_values = []
                 for interval in results["intervals"]:
-                    bw_str = interval["bandwidth"]
-                    # Extract numeric part
-                    numeric_match = re.search(r"([\d.]+)", bw_str)
-                    if numeric_match:
-                        bandwidth_values.append(float(numeric_match.group(1)))
+                    bw_mbps = interval.get("bandwidth_mbps")
+                    if bw_mbps is not None:
+                        bandwidth_values.append(bw_mbps)
 
                 if bandwidth_values:
                     avg_bw = sum(bandwidth_values) / len(bandwidth_values)
-                    # Assume Mbits/sec unit (most common)
                     results["average_bandwidth"] = f"{avg_bw:.2f} Mbits/sec"
                     results["average_bandwidth_numeric"] = avg_bw
 
