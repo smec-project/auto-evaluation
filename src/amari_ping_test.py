@@ -57,7 +57,10 @@ class AmariPingTest:
 
         try:
             result = self.host_manager.execute_on_host(
-                host_name="amari", command=ping_command, background=False
+                host_name="amari",
+                command=ping_command,
+                background=False,
+                reuse_connection=False,  # avoid per-host lock, allow true parallel SSH
             )
 
             # Parse ping statistics
@@ -184,7 +187,7 @@ class AmariPingTest:
         """
 
         if max_workers is None:
-            max_workers = min(self.num_ues, 4)  # 限制最大并发SSH连接数为4
+            max_workers = min(self.num_ues, 6)
         if not quiet:
             self.logger.info("=" * 60)
             self.logger.info("STARTING AMARI UE PING TESTS")
