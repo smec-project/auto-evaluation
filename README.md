@@ -235,9 +235,5 @@ After running all three steps, you will have:
    - Intermediate data files
 
 2. **`figures/`**: Contains all generated figures in PDF format
-   - All figures from the paper (Figure 9-21)
+   - All figures from the paper (Figures 9-21)
    - Ready for comparison with paper figures
-
-## License
-
-This artifact evaluation package is provided as supplementary material for the SMEC paper. Please refer to the main paper for citation information.
