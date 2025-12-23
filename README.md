@@ -2,13 +2,15 @@
 
 ## Overview
 
-This repository contains the automated evaluation scripts for reproducing the experiments and figures presented in the SMEC paper.
+This repository contains the automated evaluation scripts for reproducing the experimental results and figures presented in the paper titled "Enabling SLO-Aware 5G Multi-Access Edge Computing with SMEC," accepted at NSDI 2026.
 
 ### About SMEC
 
-SMEC (SLO-Aware Multi-Access Edge Computing) is a project designed for mobile edge computing environments to enable SLO-Awareness. The system addresses the challenges of dynamic workloads, network latency variations, and heterogeneous computing resources in mobile edge computing scenarios.
+SLO-Aware Multi-Access Edge Computing (SMEC) is a resource management framework that incorporates SLO awareness into multi-access edge computing environments.
+SMEC aims to maximize SLO satisfaction rates for latency-critical applications by reducing tail latency and improving performance predictability. 
 
-**Important Note**: All configurations and scripts in this repository are specifically designed for and tested on the **UTNS (University of Texas Network Systems) testbed**. The testbed infrastructure, network topology, and hardware specifications are integral to reproducing the paper's results.
+**Important Note**: All configurations and scripts in this repository are tested on the **UTNS (University of Texas Network Systems) testbed**. 
+The testbed infrastructure, network topology, and hardware specifications are integral to reproducing the paper's results.
 
 ## Prerequisites
 
