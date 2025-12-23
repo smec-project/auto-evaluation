@@ -1,4 +1,6 @@
 import argparse
+import os
+import shutil
 import sys
 from time import sleep
 from src.run_experiment import run_experiment
@@ -488,6 +490,31 @@ def test_mode():
         sys.exit(1)
 
 
+def clean_mode():
+    """Remove all generated results and figures."""
+    print("Running in clean mode...")
+    # Run evaluation on smec_all_tasks.json with operation mode 0 (Full deploy)
+    config_file = "config/smec_all_tasks.json"
+    print(f"Running experiment with config: {config_file}")
+    exit_code = run_experiment(config_file, 1)
+    if exit_code == 0:
+        print("Full cleanup completed successfully!")
+    else:
+        print(f"Full cleanup failed with exit code: {exit_code}")
+
+    targets = ["results", "figures"]
+    for path in targets:
+        if os.path.exists(path):
+            print(f"Removing: {path}")
+            try:
+                shutil.rmtree(path)
+                print(f"Removed: {path}")
+            except Exception as e:
+                print(f"Failed to remove {path}: {e}")
+        else:
+            print(f"Skip missing: {path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Auto Evaluation Tool")
     parser.add_argument(
@@ -495,8 +522,8 @@ def main():
         "--mode",
         type=str,
         required=True,
-        choices=["data", "figures", "preprocess", "test"],
-        help="Operation mode: data | figures | preprocess | test",
+        choices=["data", "figures", "preprocess", "test", "clean"],
+        help="Operation mode: data | figures | preprocess | test | clean",
     )
 
     args = parser.parse_args()
@@ -509,6 +536,8 @@ def main():
         preprocess_mode()
     elif args.mode == "test":
         test_mode()
+    elif args.mode == "clean":
+        clean_mode()
 
 
 if __name__ == "__main__":
