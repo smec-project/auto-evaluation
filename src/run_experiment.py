@@ -19,17 +19,29 @@ from src.deployment_operations import (
 )
 from src.throughput_test import ThroughputTest
 
+_LOG_CONFIGURED = False
+
 
 def setup_logging():
     """Setup logging configuration."""
+    global _LOG_CONFIGURED
+    if _LOG_CONFIGURED:
+        return logging.getLogger(__name__)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(sys.stdout),
-            logging.FileHandler("experiment.log", mode="w"),
+            logging.FileHandler(
+                "experiment.log",
+                mode="w",  # first init truncates; subsequent calls reuse handler
+                encoding="utf-8",
+                errors="replace",
+            ),
         ],
     )
+    _LOG_CONFIGURED = True
     return logging.getLogger(__name__)
 
 
