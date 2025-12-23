@@ -48,6 +48,13 @@ def data_mode():
     # Run evaluation on smec_all_tasks.json with operation mode 0 (Full deploy)
     config_file = "config/smec_all_tasks.json"
     print(f"Running experiment with config: {config_file}")
+    exit_code = run_experiment(config_file, 1)
+    if exit_code == 0:
+        print("Full cleanup completed successfully!")
+    else:
+        print(f"Full cleanup failed with exit code: {exit_code}")
+    sleep(5)
+
     exit_code = run_experiment(config_file, 0)
     if exit_code == 0:
         print("Experiment completed successfully!")
