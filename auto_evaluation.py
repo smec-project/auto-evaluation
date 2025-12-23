@@ -1,8 +1,7 @@
 import argparse
 import sys
 from time import sleep
-from datetime import datetime
-from src.run_experiment import run_experiment as run_experiment_base
+from src.run_experiment import run_experiment
 from src.host_manager import HostManager
 from src.get_results import (
     get_ran_logs,
@@ -40,56 +39,6 @@ from visualization.figure_accuracy import (
     generate_figure_19,
     generate_figure_20_b,
 )
-
-TRACE_FILE = "trace.log"
-
-
-def _load_trace(trace_path: str = TRACE_FILE):
-    trace = {}
-    try:
-        with open(trace_path, "r", encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split("|")
-                if len(parts) >= 3:
-                    key = f"{parts[0]}|{parts[1]}"
-                    trace[key] = parts[2]
-    except FileNotFoundError:
-        pass
-    return trace
-
-
-def _append_trace(
-    config_file: str, operation: int, status: str, trace_path: str = TRACE_FILE
-):
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    with open(trace_path, "a", encoding="utf-8") as f:
-        f.write(f"{config_file}|{operation}|{status}|{timestamp}\n")
-
-
-def run_experiment(
-    config_file: str,
-    operation: int,
-    cleanup_before: bool = True,
-    trace_path: str = TRACE_FILE,
-):
-    """
-    Wrapper with trace/resume and optional pre-cleanup.
-    Skips already successful (config, operation) pairs recorded in trace.
-    """
-    key = f"{config_file}|{operation}"
-    trace = _load_trace(trace_path)
-    if key in trace and trace[key].startswith("SUCCESS"):
-        print(f"[trace] skip completed: {key}")
-        return 0
-
-    if cleanup_before and operation not in (1, 3):
-        print(f"[trace] pre-cleanup before {key}")
-        run_experiment_base(config_file, 1)
-
-    status = run_experiment_base(config_file, operation)
-    status_str = "SUCCESS" if status == 0 else f"FAIL:{status}"
-    _append_trace(config_file, operation, status_str, trace_path)
-    return status
 
 
 def data_mode():
