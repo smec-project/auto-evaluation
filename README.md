@@ -3,7 +3,7 @@
 ## Overview
 
 This repository contains the automated evaluation scripts for reproducing the experimental results and figures presented in the paper titled "Enabling SLO-Aware 5G Multi-Access Edge Computing with SMEC," accepted at NSDI 2026.
-The scripts automatically configure and run the system components and example applications found in the repositories in the [project organization page](https://github.com/smec-project).
+The scripts automatically configure and run the system components and example applications found in the repositories in the [GitHub project organization page](https://github.com/smec-project).
 
 ### About SMEC
 
