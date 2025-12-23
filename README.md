@@ -3,16 +3,17 @@
 ## Overview
 
 This repository contains the automated evaluation scripts for reproducing the experimental results and figures presented in the paper titled "Enabling SLO-Aware 5G Multi-Access Edge Computing with SMEC," accepted at NSDI 2026.
+The scripts automatically configure and run the system components and example applications found in the repositories in the [project organization page](https://github.com/smec-project).
 
 ### About SMEC
 
 SLO-Aware Multi-Access Edge Computing (SMEC) is a resource management framework that incorporates SLO awareness into multi-access edge computing environments.
 SMEC aims to maximize SLO satisfaction rates for latency-critical applications by reducing tail latency and improving performance predictability. 
 
+## Prerequisites
+
 **Important Note**: All configurations and scripts in this repository are tested on the **UTNS (University of Texas Network Systems) testbed**. 
 The testbed infrastructure, network topology, and hardware specifications are integral to reproducing the paper's results.
-
-## Prerequisites
 
 Before running the evaluation scripts, ensure you have:
 
