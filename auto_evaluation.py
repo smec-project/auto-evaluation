@@ -3,6 +3,7 @@ import os
 import shutil
 import sys
 from time import sleep
+from typing import Optional
 from src.run_experiment import run_experiment
 from src.host_manager import HostManager
 from src.get_results import (
@@ -43,310 +44,94 @@ from visualization.figure_accuracy import (
 )
 
 
-def data_mode():
+def run_experiment_group(
+    config_file: str,
+    exp_type: str,
+    fetch_ran_logs: bool,
+    fetch_scheduler_logs: bool,
+):
+    """
+    Run one experiment config with optional log collection.
+    fetch_ran_logs: fetch ran logs if True.
+    fetch_scheduler_logs: fetch scheduler logs if True.
+    """
+    results_dir = (
+        f"results/{os.path.splitext(os.path.basename(config_file))[0]}"
+    )
+
+    exit_code = run_experiment(config_file, 0)
+    if exit_code == 0:
+        print("Experiment completed successfully!")
+    else:
+        print(f"Experiment failed with exit code: {exit_code}")
+    sleep(420)
+
+    if fetch_ran_logs:
+        get_ran_logs(results_dir)
+    if fetch_scheduler_logs:
+        get_scheduler_logs(results_dir)
+
+    get_server_results(results_dir, exp_type)
+    get_client_results(results_dir, exp_type)
+    clean_results()
+
+    exit_code = run_experiment(config_file, 1)
+    if exit_code == 0:
+        print("Cleanup completed successfully!")
+    else:
+        print(f"Cleanup failed with exit code: {exit_code}")
+
+
+def data_mode(selected_config: Optional[str] = None):
     """Handle data mode logic"""
     print("Running in data mode...")
 
-    # Run evaluation on smec_all_tasks.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 1)
-    if exit_code == 0:
-        print("Full cleanup completed successfully!")
-    else:
-        print(f"Full cleanup failed with exit code: {exit_code}")
-    sleep(5)
+    # special pre-cleanup for the base SMEC config (only when relevant)
+    smec_base = "config/smec_all_tasks.json"
+    if selected_config is None or selected_config == smec_base:
+        print(f"Pre-cleanup for {smec_base}")
+        pre_exit = run_experiment(smec_base, 1)
+        if pre_exit == 0:
+            print("Pre-cleanup completed successfully!")
+        else:
+            print(f"Pre-cleanup failed with exit code: {pre_exit}")
+        sleep(5)
 
-    exit_code = run_experiment(config_file, 0)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_ran_logs("results/smec_all_tasks")
-    get_scheduler_logs("results/smec_all_tasks")
-    get_server_results("results/smec_all_tasks", "smec")
-    get_client_results("results/smec_all_tasks", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
+    experiments = [
+        (smec_base, "smec", True, True),
+        ("config/smec_all_tasks_rtt.json", "smec", False, False),
+        ("config/smec_all_tasks_disable.json", "smec", False, False),
+        ("config/smec_all_tasks_wo_drop.json", "smec", False, False),
+        ("config/smec_all_tasks_disable_32cpu.json", "smec", False, True),
+        ("config/smec_all_tasks_dynamic.json", "smec", True, True),
+        ("config/smec_all_tasks_dynamic_rtt.json", "smec", False, False),
+        ("config/smec_all_tasks_dynamic_disable.json", "smec", False, False),
+        ("config/smec_all_tasks_dynamic_wo_drop.json", "smec", False, False),
+        (
+            "config/smec_all_tasks_dynamic_disable_32cpu.json",
+            "smec",
+            False,
+            True,
+        ),
+        ("config/default_all_tasks.json", "default", False, False),
+        ("config/default_all_tasks_dynamic.json", "default", False, False),
+        ("config/tutti_all_tasks.json", "tutti", False, False),
+        ("config/tutti_all_tasks_dynamic.json", "tutti", False, False),
+        ("config/arma_all_tasks.json", "arma", False, False),
+        ("config/arma_all_tasks_dynamic.json", "arma", False, False),
+    ]
 
-    # Run evaluation on smec_all_tasks_rtt.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_rtt.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/smec_all_tasks_rtt", "smec")
-    get_client_results("results/smec_all_tasks_rtt", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
+    if selected_config:
+        experiments = [
+            item for item in experiments if item[0] == selected_config
+        ]
+        if not experiments:
+            print(f"Config not found: {selected_config}")
+            sys.exit(1)
 
-    # Run evaluation on smec_all_tasks_disable.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_disable.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/smec_all_tasks_disable", "smec")
-    get_client_results("results/smec_all_tasks_disable", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on smec_all_tasks_wo_drop.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_wo_drop.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/smec_all_tasks_wo_drop", "smec")
-    get_client_results("results/smec_all_tasks_wo_drop", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on smec_all_tasks_disable_32cpu.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_disable_32cpu.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_scheduler_logs("results/smec_all_tasks_disable_32cpu")
-    get_server_results("results/smec_all_tasks_disable_32cpu", "smec")
-    get_client_results("results/smec_all_tasks_disable_32cpu", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 1)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on smec_all_tasks_dynamic.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_dynamic.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 0)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_ran_logs("results/smec_all_tasks_dynamic")
-    get_scheduler_logs("results/smec_all_tasks_dynamic")
-    get_server_results("results/smec_all_tasks_dynamic", "smec")
-    get_client_results("results/smec_all_tasks_dynamic", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on smec_all_tasks_dynamic_rtt.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_dynamic_rtt.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/smec_all_tasks_dynamic_rtt", "smec")
-    get_client_results("results/smec_all_tasks_dynamic_rtt", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on smec_all_tasks_dynamic_disable.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_dynamic_disable.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/smec_all_tasks_dynamic_disable", "smec")
-    get_client_results("results/smec_all_tasks_dynamic_disable", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on smec_all_tasks_dynamic_wo_drop.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_dynamic_wo_drop.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/smec_all_tasks_dynamic_wo_drop", "smec")
-    get_client_results("results/smec_all_tasks_dynamic_wo_drop", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on smec_all_tasks_dynamic_disable_32cpu.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks_dynamic_disable_32cpu.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_scheduler_logs("results/smec_all_tasks_dynamic_disable_32cpu")
-    get_server_results("results/smec_all_tasks_dynamic_disable_32cpu", "smec")
-    get_client_results("results/smec_all_tasks_dynamic_disable_32cpu", "smec")
-    clean_results()
-    exit_code = run_experiment(config_file, 1)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on default_all_tasks.json with operation mode 0 (Full deploy)
-    config_file = "config/default_all_tasks.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 0)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/default_all_tasks", "default")
-    get_client_results("results/default_all_tasks", "default")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on default_all_tasks_dynamic.json with operation mode 0 (Full deploy)
-    config_file = "config/default_all_tasks_dynamic.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/default_all_tasks_dynamic", "default")
-    get_client_results("results/default_all_tasks_dynamic", "default")
-    clean_results()
-    exit_code = run_experiment(config_file, 1)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on tutti_all_tasks.json with operation mode 0 (Full deploy)
-    config_file = "config/tutti_all_tasks.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 0)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/tutti_all_tasks", "tutti")
-    get_client_results("results/tutti_all_tasks", "tutti")
-    clean_results()
-    exit_code = run_experiment(config_file, 1)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on tutti_all_tasks_dynamic.json with operation mode 0 (Full deploy)
-    config_file = "config/tutti_all_tasks_dynamic.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 0)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/tutti_all_tasks_dynamic", "tutti")
-    get_client_results("results/tutti_all_tasks_dynamic", "tutti")
-    clean_results()
-    exit_code = run_experiment(config_file, 1)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on arma_all_tasks.json with operation mode 0 (Full deploy)
-    config_file = "config/arma_all_tasks.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 0)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/arma_all_tasks", "arma")
-    get_client_results("results/arma_all_tasks", "arma")
-    clean_results()
-    exit_code = run_experiment(config_file, 3)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-
-    # Run evaluation on arma_all_tasks_dynamic.json with operation mode 0 (Full deploy)
-    config_file = "config/arma_all_tasks_dynamic.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 2)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
-    sleep(420)
-    get_server_results("results/arma_all_tasks_dynamic", "arma")
-    get_client_results("results/arma_all_tasks_dynamic", "arma")
-    clean_results()
-    exit_code = run_experiment(config_file, 1)
-    if exit_code == 0:
-        print("Experiment completed successfully!")
-    else:
-        print(f"Experiment failed with exit code: {exit_code}")
+    for config_file, exp_type, fetch_ran, fetch_scheduler in experiments:
+        print(f"\nRunning experiment with config: {config_file}")
+        run_experiment_group(config_file, exp_type, fetch_ran, fetch_scheduler)
 
 
 def preprocess_mode():
@@ -390,7 +175,7 @@ def preprocess_mode():
     print("=" * 60)
 
 
-def figures_mode():
+def figures_mode(target_figure: Optional[str] = None):
     """Handle figures mode logic - generate all paper figures"""
     print("Running in figures mode...")
 
@@ -398,80 +183,35 @@ def figures_mode():
     results_base_path = "results"
     output_dir = "figures"
 
-    # Generate Figure 9
-    print("\n=== Generating Figure 9 ===")
-    generate_figure_9(results_base_path, output_dir)
-    print("\nFigure 9 generated successfully!")
+    figures = [
+        ("9", generate_figure_9, "Figure 9"),
+        ("10", generate_figure_10, "Figure 10"),
+        ("11", generate_figure_11, "Figure 11"),
+        ("12", generate_figure_12, "Figure 12"),
+        ("13", generate_figure_13, "Figure 13"),
+        ("14", generate_figure_14, "Figure 14"),
+        ("15", generate_figure_15, "Figure 15"),
+        ("16", generate_figure_16, "Figure 16"),
+        ("17", generate_figure_17, "Figure 17"),
+        ("18a", generate_figure_18_a, "Figure 18a"),
+        ("18b", generate_figure_18_b, "Figure 18b"),
+        ("19", generate_figure_19, "Figure 19"),
+        ("20a", generate_figure_20_a, "Figure 20a"),
+        ("20b", generate_figure_20_b, "Figure 20b"),
+        ("21", generate_figure_21, "Figure 21"),
+    ]
 
-    # Generate Figure 10
-    print("\n=== Generating Figure 10 ===")
-    generate_figure_10(results_base_path, output_dir)
-    print("\nFigure 10 generated successfully!")
+    if target_figure:
+        key = target_figure.lower()
+        figures = [item for item in figures if item[0] == key]
+        if not figures:
+            print(f"Figure not found: {target_figure}")
+            sys.exit(1)
 
-    # Generate Figure 11
-    print("\n=== Generating Figure 11 ===")
-    generate_figure_11(results_base_path, output_dir)
-    print("\nFigure 11 generated successfully!")
-
-    # Generate Figure 12
-    print("\n=== Generating Figure 12 ===")
-    generate_figure_12(results_base_path, output_dir)
-    print("\nFigure 12 generated successfully!")
-
-    # Generate Figure 13
-    print("\n=== Generating Figure 13 ===")
-    generate_figure_13(results_base_path, output_dir)
-    print("\nFigure 13 generated successfully!")
-
-    # Generate Figure 14
-    print("\n=== Generating Figure 14 ===")
-    generate_figure_14(results_base_path, output_dir)
-    print("\nFigure 14 generated successfully!")
-
-    # Generate Figure 15
-    print("\n=== Generating Figure 15 ===")
-    generate_figure_15(results_base_path, output_dir)
-    print("\nFigure 15 generated successfully!")
-
-    # Generate Figure 16
-    print("\n=== Generating Figure 16 ===")
-    generate_figure_16(results_base_path, output_dir)
-    print("\nFigure 16 generated successfully!")
-
-    # Generate Figure 17
-    print("\n=== Generating Figure 17 ===")
-    generate_figure_17(results_base_path, output_dir)
-    print("\nFigure 17 generated successfully!")
-
-    # Generate Figure 18a
-    print("\n=== Generating Figure 18a ===")
-    generate_figure_18_a(results_base_path, output_dir)
-    print("\nFigure 18a generated successfully!")
-
-    # Generate Figure 18b
-    print("\n=== Generating Figure 18b ===")
-    generate_figure_18_b(results_base_path, output_dir)
-    print("\nFigure 18b generated successfully!")
-
-    # Generate Figure 19
-    print("\n=== Generating Figure 19 ===")
-    generate_figure_19(results_base_path, output_dir)
-    print("\nFigure 19 generated successfully!")
-
-    # Generate Figure 20a
-    print("\n=== Generating Figure 20a ===")
-    generate_figure_20_a(results_base_path, output_dir)
-    print("\nFigure 20a generated successfully!")
-
-    # Generate Figure 20b
-    print("\n=== Generating Figure 20b ===")
-    generate_figure_20_b(results_base_path, output_dir)
-    print("\nFigure 20b generated successfully!")
-
-    # Generate Figure 21
-    print("\n=== Generating Figure 21 ===")
-    generate_figure_21(results_base_path, output_dir)
-    print("\nFigure 21 generated successfully!")
+    for _, func, label in figures:
+        print(f"\n=== Generating {label} ===")
+        func(results_base_path, output_dir)
+        print(f"\n{label} generated successfully!")
 
 
 def test_mode():
@@ -490,26 +230,24 @@ def test_mode():
         sys.exit(1)
 
 
-def clean_mode():
-    """Remove all generated results and figures."""
+def clean_mode(selected_config: Optional[str] = None):
+    """Remove generated results; if no config specified, also remove figures."""
     print("Running in clean mode...")
-    # Run evaluation on smec_all_tasks.json with operation mode 0 (Full deploy)
-    config_file = "config/smec_all_tasks.json"
-    print(f"Running experiment with config: {config_file}")
-    exit_code = run_experiment(config_file, 1)
-    if exit_code == 0:
-        print("Full cleanup completed successfully!")
+    if selected_config:
+        results_dir = (
+            f"results/{os.path.splitext(os.path.basename(selected_config))[0]}"
+        )
+        targets = [results_dir]
     else:
-        print(f"Full cleanup failed with exit code: {exit_code}")
+        targets = ["results", "figures"]
 
-    targets = ["results", "figures"]
     for path in targets:
         if os.path.exists(path):
             print(f"Removing: {path}")
             try:
                 shutil.rmtree(path)
                 print(f"Removed: {path}")
-            except Exception as e:
+            except OSError as e:
                 print(f"Failed to remove {path}: {e}")
         else:
             print(f"Skip missing: {path}")
@@ -525,19 +263,39 @@ def main():
         choices=["data", "figures", "preprocess", "test", "clean"],
         help="Operation mode: data | figures | preprocess | test | clean",
     )
+    parser.add_argument(
+        "-c",
+        "--config-file",
+        type=str,
+        required=False,
+        help=(
+            "Optional: only run the specified config file in data mode; if used"
+            " with clean mode, only clean that config's results directory"
+        ),
+    )
+    parser.add_argument(
+        "-f",
+        "--figure",
+        type=str,
+        required=False,
+        help=(
+            "Optional: only generate the specified figure id (e.g., 9, 10, 18a,"
+            " 20b)"
+        ),
+    )
 
     args = parser.parse_args()
 
     if args.mode == "data":
-        data_mode()
+        data_mode(args.config_file)
     elif args.mode == "figures":
-        figures_mode()
+        figures_mode(args.figure)
     elif args.mode == "preprocess":
         preprocess_mode()
     elif args.mode == "test":
         test_mode()
     elif args.mode == "clean":
-        clean_mode()
+        clean_mode(args.config_file)
 
 
 if __name__ == "__main__":
