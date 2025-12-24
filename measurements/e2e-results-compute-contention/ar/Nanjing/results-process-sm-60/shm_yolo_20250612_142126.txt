@@ -1,0 +1,5 @@
+Frame        Inference_Time_ms    Objects_Detected
+0                       181.01                  13
+1                        30.61                  13
+2                        29.30                  13
+3                        28.48                  13
