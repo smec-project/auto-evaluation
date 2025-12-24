@@ -109,7 +109,7 @@ This step runs all experiments and collects raw data from the testbed.
 python auto_evaluation.py -m data
 ```
 
-**Expected Duration**: Approximately **2 hours**
+**Expected Duration**: Approximately **3 hours**
 
 **What it does**:
 
@@ -123,16 +123,22 @@ python auto_evaluation.py -m data
 
 ```text
 results/
-├── smec_all_tasks/
-├── smec_all_tasks_dynamic/
-├── smec_all_tasks_disable_32cpu/
-├── smec_all_tasks_dynamic_disable_32cpu/
 ├── arma_all_tasks/
 ├── arma_all_tasks_dynamic/
-├── tutti_all_tasks/
-├── tutti_all_tasks_dynamic/
 ├── default_all_tasks/
-└── default_all_tasks_dynamic/
+├── default_all_tasks_dynamic/
+├── smec_all_tasks/
+├── smec_all_tasks_disable/
+├── smec_all_tasks_disable_32cpu/
+├── smec_all_tasks_dynamic/
+├── smec_all_tasks_dynamic_disable/
+├── smec_all_tasks_dynamic_disable_32cpu/
+├── smec_all_tasks_dynamic_rtt/
+├── smec_all_tasks_dynamic_wo_drop/
+├── smec_all_tasks_rtt/
+├── smec_all_tasks_wo_drop/
+├── tutti_all_tasks/
+└── tutti_all_tasks_dynamic/
 ```
 
 ### Step 2: Data Preprocessing (Mode: `preprocess`)
@@ -214,7 +220,7 @@ figures/
 To reproduce all experiments and figures from scratch:
 
 ```bash
-# Step 1: Collect experimental data (~2 hours)
+# Step 1: Collect experimental data (~3 hours)
 python auto_evaluation.py -m data
 
 # Step 2: Preprocess the collected data (~5 minutes)
@@ -224,7 +230,7 @@ python auto_evaluation.py -m preprocess
 python auto_evaluation.py -m figures
 ```
 
-**Total Time**: Approximately **2 hours and 10 minutes**
+**Total Time**: Approximately **3 hours and 10 minutes**
 
 ## Output Directories
 
