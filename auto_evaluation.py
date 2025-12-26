@@ -42,6 +42,9 @@ from visualization.figure_accuracy import (
     generate_figure_19,
     generate_figure_20_b,
 )
+from visualization.figure_measurements import (
+    generate_latency_decomposition_figure,
+)
 
 
 def run_experiment_group(
@@ -230,6 +233,28 @@ def test_mode():
         sys.exit(1)
 
 
+def measurement_mode():
+    """Handle measurement mode logic - generate latency decomposition figures"""
+    print("Running in measurement mode...")
+
+    measurements_base_path = "measurements/latency-decomposition"
+    output_dir = "figures"
+
+    figures_to_generate = [
+        ("Dallas", "2"),
+        ("Nanjing", "28a"),
+        ("Seoul", "28b"),
+    ]
+
+    for city, label in figures_to_generate:
+        data_path = os.path.join(measurements_base_path, city)
+        print(f"\n=== Generating Figure {label} ({city}) ===")
+        output_file = generate_latency_decomposition_figure(
+            data_path, label, output_dir
+        )
+        print(f"Figure {label} generated successfully: {output_file}")
+
+
 def clean_mode(selected_config: Optional[str] = None):
     """Remove generated results; if no config specified, also remove figures."""
     print("Running in clean mode...")
@@ -260,8 +285,18 @@ def main():
         "--mode",
         type=str,
         required=True,
-        choices=["data", "figures", "preprocess", "test", "clean"],
-        help="Operation mode: data | figures | preprocess | test | clean",
+        choices=[
+            "data",
+            "figures",
+            "preprocess",
+            "test",
+            "clean",
+            "measurement",
+        ],
+        help=(
+            "Operation mode: data | figures | preprocess | test | clean |"
+            " measurement"
+        ),
     )
     parser.add_argument(
         "-c",
@@ -296,6 +331,8 @@ def main():
         test_mode()
     elif args.mode == "clean":
         clean_mode(args.config_file)
+    elif args.mode == "measurement":
+        measurement_mode()
 
 
 if __name__ == "__main__":
