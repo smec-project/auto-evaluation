@@ -1,8 +1,11 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 import re
 import glob
+from typing import Tuple
+import matplotlib.ticker as ticker
 
 
 def extract_data_size(filename):
@@ -281,3 +284,439 @@ def generate_latency_decomposition_figure(
     create_total_latency_boxplot(all_data, output_file)
 
     return output_file + ".pdf"
+
+
+def extract_timestamp_from_filename(filename: str) -> str:
+    """
+    Extract timestamp from filename for matching purpose.
+    Args:
+        filename: File name like 'latency_20250530_053530833.txt'
+    Returns:
+        Timestamp string for matching (e.g., '20250530_0535')
+    """
+    match = re.search(r"(\d{8})_(\d{2})(\d{2})\d+", filename)
+    if match:
+        date_part = match.group(1)
+        hour_part = match.group(2)
+        minute_part = match.group(3)
+        return f"{date_part}_{hour_part}{minute_part}"
+    return ""
+
+
+def find_matching_process_file(latency_file: str, process_files: list) -> str:
+    """
+    Find the corresponding process file for a given latency file.
+    Args:
+        latency_file: Name of the latency file
+        process_files: List of available process files
+    Returns:
+        Matching process file name or empty string if not found
+    """
+    latency_timestamp = extract_timestamp_from_filename(latency_file)
+    if not latency_timestamp:
+        return ""
+
+    for process_file in process_files:
+        process_timestamp = extract_timestamp_from_filename(process_file)
+        if latency_timestamp[-2:] == process_timestamp[-2:]:
+            return process_file
+    return ""
+
+
+def load_e2e_latency_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Load E2E latency data from file.
+    Args:
+        file_path: Path to the latency file
+    Returns:
+        Tuple of (frame_indices, latency_values) for valid data
+    """
+    data = []
+    frame_indices = []
+
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+
+    for line in lines[1:]:
+        line = line.strip()
+        if line:
+            try:
+                parts = line.split()
+                frame_num = int(parts[0])
+                latency_str = parts[1].replace("ms", "").strip()
+                latency_val = float(latency_str)
+
+                frame_indices.append(frame_num)
+                data.append(latency_val)
+            except (ValueError, IndexError):
+                continue
+
+    return np.array(frame_indices), np.array(data)
+
+
+def load_processing_data(
+    file_path: str, valid_frame_indices: np.ndarray
+) -> np.ndarray:
+    """
+    Load processing time data from process file, filtering by valid frame indices.
+    Args:
+        file_path: Path to the process file
+        valid_frame_indices: Frame indices that have valid E2E data
+    Returns:
+        Processing time values for valid frames
+    """
+    processing_data = []
+
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+
+    for line in lines[1:]:
+        line = line.strip()
+        if line:
+            try:
+                parts = line.split()
+                frame_num = int(parts[0])
+
+                if frame_num in valid_frame_indices:
+                    processing_time = float(parts[1])
+                    processing_data.append(processing_time)
+            except (ValueError, IndexError):
+                continue
+
+    return np.array(processing_data)
+
+
+def calculate_cdf(data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Calculate CDF for given data.
+    Args:
+        data: Input data array
+    Returns:
+        Tuple of (sorted_data, cdf_values)
+    """
+    sorted_data = np.sort(data)
+    cdf = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
+    return sorted_data, cdf
+
+
+def process_folder_data(
+    result_folder: str, process_folder: str
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Process all files in a folder pair and return combined E2E, processing, and network latency data.
+    Args:
+        result_folder: Path to result folder containing latency files
+        process_folder: Path to process folder containing processing time files
+    Returns:
+        Tuple of (combined_e2e_data, combined_processing_data, combined_network_data)
+    """
+    e2e_all_data = []
+    processing_all_data = []
+    network_all_data = []
+
+    latency_files = [
+        f
+        for f in os.listdir(result_folder)
+        if f.endswith(".txt") and f.startswith("latency_")
+    ]
+    process_files = [
+        f
+        for f in os.listdir(process_folder)
+        if f.endswith(".txt") and f.startswith("process_")
+    ]
+
+    print(
+        f"Processing {len(latency_files)} latency files from"
+        f" {os.path.basename(result_folder)}"
+    )
+
+    for latency_file in latency_files:
+        matching_process_file = find_matching_process_file(
+            latency_file, process_files
+        )
+
+        if not matching_process_file:
+            print(f"Warning: No matching process file found for {latency_file}")
+            continue
+
+        latency_path = os.path.join(result_folder, latency_file)
+        frame_indices, e2e_data = load_e2e_latency_data(latency_path)
+
+        if len(e2e_data) == 0:
+            print(f"Warning: No valid E2E data in {latency_file}")
+            continue
+
+        process_path = os.path.join(process_folder, matching_process_file)
+        processing_data = load_processing_data(process_path, frame_indices)
+
+        if len(processing_data) != len(e2e_data):
+            print(
+                f"Warning: Mismatched data lengths for {latency_file}:"
+                f" E2E={len(e2e_data)}, Processing={len(processing_data)}"
+            )
+            min_len = min(len(e2e_data), len(processing_data))
+            e2e_data = e2e_data[:min_len]
+            processing_data = processing_data[:min_len]
+
+        network_data = e2e_data - processing_data
+
+        e2e_all_data.extend(e2e_data)
+        processing_all_data.extend(processing_data)
+        network_all_data.extend(network_data)
+
+        print(
+            f"  Processed {latency_file} -> {matching_process_file}:"
+            f" {len(e2e_data)} data points"
+        )
+
+    return (
+        np.array(e2e_all_data),
+        np.array(processing_all_data),
+        np.array(network_all_data),
+    )
+
+
+def generate_e2e_cdf_figure(data_path, label, output_dir="figures"):
+    """
+    Generate E2E latency CDF figure for a given task type.
+
+    Args:
+        data_path: Path to the task directory containing city subdirectories
+                  e.g., '/path/to/measurements/e2e-results/ar'
+        label: Label for the figure, e.g., '1', '22'
+        output_dir: Directory to save the output figure (default: 'figures')
+
+    Returns:
+        Path to the generated PDF file
+    """
+    print(f"\n{'='*60}")
+    print(f"Generating Figure {label} for {os.path.basename(data_path)}")
+    print(f"{'='*60}")
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    folder_pairs = [
+        (
+            os.path.join(data_path, "Dallas/result-nostress"),
+            os.path.join(data_path, "Dallas/result-process-nostress"),
+            "City-1",
+        ),
+        (
+            os.path.join(data_path, "Dallas/result-busy"),
+            os.path.join(data_path, "Dallas/result-process-busy"),
+            "City-1-Busy",
+        ),
+        (
+            os.path.join(data_path, "Nanjing/result-nostress"),
+            os.path.join(data_path, "Nanjing/result-process-nostress"),
+            "City-2",
+        ),
+        (
+            os.path.join(data_path, "Seoul/result-nostress"),
+            os.path.join(data_path, "Seoul/result-process-nostress"),
+            "City-3",
+        ),
+    ]
+
+    plt.rcParams.update(
+        {
+            "font.size": 20,
+            "axes.labelsize": 24,
+            "axes.titlesize": 26,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 26,
+            "legend.fontsize": 18,
+            "figure.titlesize": 28,
+            "lines.linewidth": 3,
+            "xtick.major.size": 12,
+            "ytick.major.size": 12,
+        }
+    )
+
+    all_e2e_data = {}
+    all_processing_data = {}
+    all_network_data = {}
+
+    for result_folder, process_folder, city_label in folder_pairs:
+        if not os.path.exists(result_folder) or not os.path.exists(
+            process_folder
+        ):
+            print(
+                f"Warning: Folder pair {result_folder}/{process_folder} not"
+                " found, skipping..."
+            )
+            continue
+
+        print(f"\nProcessing folder pair: {city_label}")
+        e2e_data, processing_data, network_data = process_folder_data(
+            result_folder, process_folder
+        )
+
+        if (
+            len(e2e_data) > 0
+            and len(processing_data) > 0
+            and len(network_data) > 0
+        ):
+            all_e2e_data[city_label] = e2e_data
+            all_processing_data[city_label] = processing_data
+            all_network_data[city_label] = network_data
+            print(
+                f"  Total data points for {city_label}: E2E={len(e2e_data)},"
+                f" Processing={len(processing_data)},"
+                f" Network={len(network_data)}"
+            )
+        else:
+            print(f"  No valid data found for {city_label}")
+
+    plt.figure(figsize=(18, 7))
+
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd"]
+    linestyles = ["-", "--", "-.", ":"]
+    markers = ["o", "s", "^", "v"]
+
+    for i, (city_label, data) in enumerate(all_e2e_data.items()):
+        if len(data) > 0:
+            sorted_data, cdf = calculate_cdf(data)
+            plt.plot(
+                sorted_data,
+                cdf,
+                label=city_label,
+                color=colors[i % len(colors)],
+                linestyle=linestyles[i % len(linestyles)],
+                marker=markers[i % len(markers)],
+                markersize=12,
+                markevery=len(sorted_data) // 20,
+                linewidth=6,
+                alpha=0.9,
+                markerfacecolor="white",
+                markeredgewidth=3,
+                markeredgecolor=colors[i % len(colors)],
+            )
+
+    plt.axvline(
+        x=100, color="#d62728", linestyle=":", linewidth=6, alpha=0.8, zorder=5
+    )
+
+    plt.xlabel("E2E Latency (ms)", fontsize=52, color="#333333")
+    plt.ylabel("CDF", fontsize=52, color="#333333")
+
+    handles, labels_list = plt.gca().get_legend_handles_labels()
+    slo_line = plt.Line2D(
+        [0], [0], color="#d62728", linestyle=":", linewidth=6, alpha=0.8
+    )
+    handles.append(slo_line)
+    labels_list.append("SLO")
+
+    plt.legend(
+        handles,
+        labels_list,
+        fontsize=36,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        bbox_to_anchor=(0.5, 1.02),
+        loc="lower center",
+        ncol=5,
+        framealpha=0.95,
+        edgecolor="#333333",
+        facecolor="white",
+        columnspacing=1.0,
+        handletextpad=0.4,
+    )
+
+    plt.grid(True, alpha=0.4, linestyle="--", linewidth=0.8, color="#cccccc")
+
+    plt.ylim(0, 1.05)
+    plt.yticks([0, 0.5, 1])
+    plt.xscale("log")
+    plt.xlim(left=30)
+
+    plt.gca().xaxis.set_major_locator(ticker.LogLocator(base=10, numticks=6))
+    plt.gca().xaxis.set_minor_locator(
+        ticker.LogLocator(base=10, subs=(0.2, 0.4, 0.6, 0.8), numticks=12)
+    )
+
+    plt.tick_params(
+        axis="x",
+        which="major",
+        labelsize=52,
+        colors="#333333",
+        width=2,
+        length=10,
+    )
+    plt.tick_params(
+        axis="y",
+        which="major",
+        labelsize=52,
+        colors="#333333",
+        width=2,
+        length=10,
+    )
+
+    plt.gca().set_facecolor("#fafafa")
+
+    for spine in plt.gca().spines.values():
+        spine.set_linewidth(2.5)
+        spine.set_color("#333333")
+
+    plt.tight_layout()
+
+    output_file = os.path.join(output_dir, f"figure_{label}.pdf")
+    plt.savefig(output_file, format="pdf", dpi=300, bbox_inches="tight")
+    print(f"\nE2E latency CDF plot saved as '{output_file}'")
+    plt.close()
+
+    print("\n" + "=" * 60)
+    print("SUMMARY STATISTICS")
+    print("=" * 60)
+
+    slo_threshold = 100
+
+    print(f"\nSLO COMPLIANCE (< {slo_threshold}ms):")
+    print("-" * 40)
+
+    for city_label in all_e2e_data.keys():
+        if (
+            city_label in all_e2e_data
+            and city_label in all_processing_data
+            and city_label in all_network_data
+        ):
+            e2e_data = all_e2e_data[city_label]
+            processing_data = all_processing_data[city_label]
+            network_data = all_network_data[city_label]
+
+            e2e_below_slo = np.sum(e2e_data < slo_threshold)
+            e2e_total = len(e2e_data)
+            e2e_slo_ratio = e2e_below_slo / e2e_total
+
+            print(
+                f"{city_label}:"
+                f" {e2e_slo_ratio:.4f} ({e2e_below_slo}/{e2e_total})"
+            )
+
+            print(f"\n{city_label}:")
+            print(
+                f"  E2E Latency     - Mean: {np.mean(e2e_data):.2f}ms, Median:"
+                f" {np.median(e2e_data):.2f}ms, 95th percentile:"
+                f" {np.percentile(e2e_data, 95):.2f}ms"
+            )
+            print(
+                f"  Processing Time - Mean: {np.mean(processing_data):.2f}ms,"
+                f" Median: {np.median(processing_data):.2f}ms, 95th percentile:"
+                f" {np.percentile(processing_data, 95):.2f}ms"
+            )
+            print(
+                f"  Network Latency - Mean: {np.mean(network_data):.2f}ms,"
+                f" Median: {np.median(network_data):.2f}ms, 95th percentile:"
+                f" {np.percentile(network_data, 95):.2f}ms"
+            )
+
+    return output_file

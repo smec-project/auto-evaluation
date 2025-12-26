@@ -44,6 +44,7 @@ from visualization.figure_accuracy import (
 )
 from visualization.figure_measurements import (
     generate_latency_decomposition_figure,
+    generate_e2e_cdf_figure,
 )
 
 
@@ -234,25 +235,51 @@ def test_mode():
 
 
 def measurement_mode():
-    """Handle measurement mode logic - generate latency decomposition figures"""
+    """Handle measurement mode logic - generate latency decomposition and E2E CDF figures"""
     print("Running in measurement mode...")
 
-    measurements_base_path = "measurements/latency-decomposition"
     output_dir = "figures"
 
-    figures_to_generate = [
+    # Generate latency decomposition figures
+    print("\n" + "=" * 60)
+    print("PART 1: Generating Latency Decomposition Figures")
+    print("=" * 60)
+
+    measurements_base_path = "measurements/latency-decomposition"
+    decomposition_figures = [
         ("Dallas", "2"),
         ("Nanjing", "28a"),
         ("Seoul", "28b"),
     ]
 
-    for city, label in figures_to_generate:
+    for city, label in decomposition_figures:
         data_path = os.path.join(measurements_base_path, city)
         print(f"\n=== Generating Figure {label} ({city}) ===")
         output_file = generate_latency_decomposition_figure(
             data_path, label, output_dir
         )
         print(f"Figure {label} generated successfully: {output_file}")
+
+    # Generate E2E CDF figures
+    print("\n" + "=" * 60)
+    print("PART 2: Generating E2E Latency CDF Figures")
+    print("=" * 60)
+
+    e2e_base_path = "measurements/e2e-results"
+    e2e_figures = [
+        ("ss", "1"),
+        ("ar", "22"),
+    ]
+
+    for task_type, label in e2e_figures:
+        data_path = os.path.join(e2e_base_path, task_type)
+        print(f"\n=== Generating Figure {label} ({task_type.upper()}) ===")
+        output_file = generate_e2e_cdf_figure(data_path, label, output_dir)
+        print(f"Figure {label} generated successfully: {output_file}")
+
+    print("\n" + "=" * 60)
+    print("All measurement figures generated successfully!")
+    print("=" * 60)
 
 
 def clean_mode(selected_config: Optional[str] = None):
