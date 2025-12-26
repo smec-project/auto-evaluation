@@ -178,9 +178,9 @@ results/
 │   └── ...
 ```
 
-### Step 3: Figure Generation (Mode: `figures`)
+### Step 3: Evaluation Figure Generation (Mode: `figures`)
 
-This step generates all figures presented in the paper.
+This step generates all evaluation figures presented in the paper.
 
 ```bash
 python auto_evaluation.py -m figures
@@ -191,10 +191,10 @@ python auto_evaluation.py -m figures
 **What it does**:
 
 - Reads processed data from `results/` directory
-- Generates all paper figures (Figure 9 through Figure 21)
+- Generates all paper evaluation figures (Figure 9 through Figure 21)
 - Saves figures in PDF format to the `figures/` directory
 
-**Generated Figures**:
+**Generated Evaluation Figures**:
 
 ```text
 figures/
@@ -215,6 +215,39 @@ figures/
 └── figure_21.pdf     # Scheduler overhead analysis
 ```
 
+### Optional: Measurement Figure Generation (Mode: `measurement`)
+
+This optional step generates measurement-related figures based on pre-collected data from real-world 5G deployments.
+
+```bash
+python auto_evaluation.py -m measurement
+```
+
+**Expected Duration**: Less than **1 minutes**
+
+**What it does**:
+
+- Reads pre-collected measurement data from `measurements/` directory
+- Generates latency decomposition, E2E latency CDF, and compute contention figures
+- Saves figures in PDF format to the `figures/` directory
+
+**Generated Measurement Figures**:
+
+```text
+figures/
+├── figure_1.pdf      # E2E Latency CDF (SS)
+├── figure_2.pdf      # Latency Decomposition (City-1)
+├── figure_4.pdf      # Compute Contention CDF (SS - City-1)
+├── figure_22.pdf     # E2E Latency CDF (AR)
+├── figure_23.pdf     # Compute Contention CDF (SS - City-2)
+├── figure_24.pdf     # Compute Contention CDF (SS - City-3)
+├── figure_25.pdf     # Compute Contention CDF (AR - City-1)
+├── figure_26.pdf     # Compute Contention CDF (AR - City-2)
+├── figure_27.pdf     # Compute Contention CDF (AR - City-3)
+├── figure_28a.pdf    # Latency Decomposition (City-2)
+└── figure_28b.pdf    # Latency Decomposition (City-3)
+```
+
 ## Complete Workflow Example
 
 To reproduce all experiments and figures from scratch:
@@ -226,8 +259,11 @@ python auto_evaluation.py -m data
 # Step 2: Preprocess the collected data (~5 minutes)
 python auto_evaluation.py -m preprocess
 
-# Step 3: Generate all paper figures (~2 minutes)
+# Step 3: Generate evaluation figures (~2 minutes)
 python auto_evaluation.py -m figures
+
+# Optional: Generate measurement figures (~1 minute)
+python auto_evaluation.py -m measurement
 ```
 
 **Total Time**: Approximately **3 hours and 10 minutes**
@@ -242,5 +278,5 @@ After running all three steps, you will have:
    - Intermediate data files
 
 2. **`figures/`**: Contains all generated figures in PDF format
-   - All figures from the paper (Figures 9-21)
-   - Ready for comparison with paper figures
+   - Evaluation figures (Figures 9-21)
+   - Optional: Measurement figures (Figures 1, 2, 4, 22-28)
