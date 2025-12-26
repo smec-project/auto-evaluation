@@ -45,6 +45,7 @@ from visualization.figure_accuracy import (
 from visualization.figure_measurements import (
     generate_latency_decomposition_figure,
     generate_e2e_cdf_figure,
+    generate_compute_contention_cdf_figure,
 )
 
 
@@ -275,6 +276,29 @@ def measurement_mode():
         data_path = os.path.join(e2e_base_path, task_type)
         print(f"\n=== Generating Figure {label} ({task_type.upper()}) ===")
         output_file = generate_e2e_cdf_figure(data_path, label, output_dir)
+        print(f"Figure {label} generated successfully: {output_file}")
+
+    # Generate Compute Contention CDF figures
+    print("\n" + "=" * 60)
+    print("PART 3: Generating Compute Contention CDF Figures")
+    print("=" * 60)
+
+    compute_contention_figures = [
+        ("ss", "Dallas", "4"),
+        ("ss", "Nanjing", "23"),
+        ("ss", "Seoul", "24"),
+        ("ar", "Dallas", "25"),
+        ("ar", "Nanjing", "26"),
+        ("ar", "Seoul", "27"),
+    ]
+
+    for app_type, city, label in compute_contention_figures:
+        print(
+            f"\n=== Generating Figure {label} ({app_type.upper()} - {city}) ==="
+        )
+        output_file = generate_compute_contention_cdf_figure(
+            app_type, city, label, output_dir
+        )
         print(f"Figure {label} generated successfully: {output_file}")
 
     print("\n" + "=" * 60)

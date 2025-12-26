@@ -720,3 +720,258 @@ def generate_e2e_cdf_figure(data_path, label, output_dir="figures"):
             )
 
     return output_file
+
+
+def generate_compute_contention_cdf_figure(
+    app_type, city, label, output_dir="figures"
+):
+    """
+    Generate compute contention E2E latency CDF figure for a given app and city.
+
+    Args:
+        app_type: Application type ('ar' or 'ss')
+        city: City name ('Dallas', 'Nanjing', or 'Seoul')
+        label: Label for the figure, e.g., '4', '23', '24', '25', '26', '27'
+        output_dir: Directory to save the output figure (default: 'figures')
+
+    Returns:
+        Path to the generated PDF file
+    """
+    print(f"\n{'='*60}")
+    print(
+        f"Generating Figure {label} for {app_type.upper()} in {city} (Compute"
+        " Contention)"
+    )
+    print(f"{'='*60}")
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    base_path = f"measurements/e2e-results-compute-contention/{app_type}/{city}"
+
+    if app_type == "ar":
+        folder_pairs = [
+            ("result-nostress", "results-process-nostress", "0%"),
+            ("result-sm-20", "results-process-sm-20", "20%"),
+            ("result-sm-40", "results-process-sm-40", "40%"),
+            ("result-sm-60", "results-process-sm-60", "60%"),
+        ]
+    elif app_type == "ss":
+        folder_pairs = [
+            ("result-nostress", "result-process-nostress", "0%"),
+            ("result-cpu-10", "result-process-cpu-10", "10%"),
+            ("result-cpu-20", "result-process-cpu-20", "20%"),
+            ("result-cpu-30", "result-process-cpu-30", "30%"),
+            ("result-cpu-40", "result-process-cpu-40", "40%"),
+        ]
+    else:
+        raise ValueError(f"Unknown app_type: {app_type}. Must be 'ar' or 'ss'.")
+
+    plt.rcParams.update(
+        {
+            "font.size": 20,
+            "axes.labelsize": 24,
+            "axes.titlesize": 26,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 26,
+            "legend.fontsize": 20,
+            "figure.titlesize": 28,
+            "lines.linewidth": 3,
+            "xtick.major.size": 8,
+            "ytick.major.size": 8,
+        }
+    )
+
+    all_e2e_data = {}
+    all_processing_data = {}
+    all_network_data = {}
+
+    for result_folder, process_folder, contention_label in folder_pairs:
+        result_path = os.path.join(base_path, result_folder)
+        process_path = os.path.join(base_path, process_folder)
+
+        if not os.path.exists(result_path) or not os.path.exists(process_path):
+            print(
+                f"Warning: Folder pair {result_path}/{process_path} not found,"
+                " skipping..."
+            )
+            continue
+
+        print(f"\nProcessing contention level: {contention_label}")
+        e2e_data, processing_data, network_data = process_folder_data(
+            result_path, process_path
+        )
+
+        if (
+            len(e2e_data) > 0
+            and len(processing_data) > 0
+            and len(network_data) > 0
+        ):
+            all_e2e_data[contention_label] = e2e_data
+            all_processing_data[contention_label] = processing_data
+            all_network_data[contention_label] = network_data
+            print(
+                f"  Total data points for {contention_label}:"
+                f" E2E={len(e2e_data)}, Processing={len(processing_data)},"
+                f" Network={len(network_data)}"
+            )
+        else:
+            print(f"  No valid data found for {contention_label}")
+
+    plt.figure(figsize=(20, 8))
+
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except:
+        try:
+            plt.style.use("seaborn-whitegrid")
+        except:
+            pass
+
+    colors = [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#8B4513",
+        "#9467bd",
+    ]
+    linestyles = ["-", "--", "-.", ":", (0, (3, 1, 1, 1))]
+    markers = ["o", "s", "^", "D", "v"]
+
+    for i, (contention_label, data) in enumerate(all_e2e_data.items()):
+        if len(data) > 0:
+            sorted_data, cdf = calculate_cdf(data)
+            plt.plot(
+                sorted_data,
+                cdf,
+                label=contention_label,
+                color=colors[i % len(colors)],
+                linestyle=linestyles[i % len(linestyles)],
+                marker=markers[i % len(markers)],
+                markersize=12,
+                markevery=len(sorted_data) // 20,
+                linewidth=6,
+                alpha=0.9,
+                markerfacecolor="white",
+                markeredgewidth=3,
+                markeredgecolor=colors[i % len(colors)],
+            )
+
+    plt.axvline(
+        x=100, color="#d62728", linestyle=":", linewidth=6, alpha=0.8, zorder=5
+    )
+
+    plt.xlabel("E2E Latency (ms)", fontsize=52, color="#333333")
+    plt.ylabel("CDF", fontsize=52, color="#333333")
+
+    handles, labels_list = plt.gca().get_legend_handles_labels()
+    slo_line = plt.Line2D(
+        [0], [0], color="#d62728", linestyle=":", linewidth=6, alpha=0.8
+    )
+    handles.append(slo_line)
+    labels_list.append("SLO")
+
+    plt.legend(
+        handles,
+        labels_list,
+        fontsize=40,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        bbox_to_anchor=(0.5, 1.02),
+        loc="lower center",
+        ncol=6,
+        framealpha=0.95,
+        edgecolor="#333333",
+        facecolor="white",
+        columnspacing=1.0,
+        handletextpad=0.4,
+    )
+
+    plt.grid(True, alpha=0.4, linestyle="--", linewidth=0.8, color="#cccccc")
+
+    plt.ylim(0, 1.05)
+    plt.yticks([0, 0.5, 1])
+    plt.xscale("log")
+    plt.xlim(left=40)
+
+    plt.gca().xaxis.set_major_locator(ticker.LogLocator(base=10, numticks=6))
+    plt.gca().xaxis.set_minor_locator(
+        ticker.LogLocator(base=10, subs=(0.2, 0.4, 0.6, 0.8), numticks=12)
+    )
+
+    plt.tick_params(
+        axis="x",
+        which="major",
+        labelsize=52,
+        colors="#333333",
+        width=2,
+        length=10,
+    )
+    plt.tick_params(
+        axis="y",
+        which="major",
+        labelsize=52,
+        colors="#333333",
+        width=2,
+        length=10,
+    )
+
+    plt.gca().set_facecolor("#fafafa")
+
+    for spine in plt.gca().spines.values():
+        spine.set_linewidth(2.5)
+        spine.set_color("#333333")
+
+    plt.tight_layout()
+
+    output_file = os.path.join(output_dir, f"figure_{label}.pdf")
+    plt.savefig(output_file, format="pdf", dpi=300, bbox_inches="tight")
+    print(f"\nCompute contention CDF plot saved as '{output_file}'")
+    plt.close()
+
+    print("\n" + "=" * 60)
+    print("SUMMARY STATISTICS")
+    print("=" * 60)
+
+    slo_threshold = 100
+
+    print(f"\nSLO COMPLIANCE (< {slo_threshold}ms):")
+    print("-" * 40)
+
+    for contention_label in all_e2e_data.keys():
+        if (
+            contention_label in all_e2e_data
+            and contention_label in all_processing_data
+            and contention_label in all_network_data
+        ):
+            e2e_data = all_e2e_data[contention_label]
+            processing_data = all_processing_data[contention_label]
+            network_data = all_network_data[contention_label]
+
+            e2e_below_slo = np.sum(e2e_data < slo_threshold)
+            e2e_total = len(e2e_data)
+            e2e_slo_ratio = e2e_below_slo / e2e_total
+
+            print(
+                f"{contention_label}:"
+                f" {e2e_slo_ratio:.4f} ({e2e_below_slo}/{e2e_total})"
+            )
+
+            print(f"\n{contention_label}:")
+            print(
+                f"  E2E Latency     - Mean: {np.mean(e2e_data):.2f}ms, Median:"
+                f" {np.median(e2e_data):.2f}ms, 95th percentile:"
+                f" {np.percentile(e2e_data, 95):.2f}ms"
+            )
+            print(
+                f"  Processing Time - Mean: {np.mean(processing_data):.2f}ms,"
+                f" Median: {np.median(processing_data):.2f}ms, 95th percentile:"
+                f" {np.percentile(processing_data, 95):.2f}ms"
+            )
+            print(
+                f"  Network Latency - Mean: {np.mean(network_data):.2f}ms,"
+                f" Median: {np.median(network_data):.2f}ms, 95th percentile:"
+                f" {np.percentile(network_data, 95):.2f}ms"
+            )
+
+    return output_file
